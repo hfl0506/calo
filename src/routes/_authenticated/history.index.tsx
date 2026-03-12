@@ -22,7 +22,7 @@ const MEAL_TAG_LABEL: Record<MealTag, string> = {
 }
 
 type MealWithFoods = {
-  id: number
+  id: string
   userId: string
   tag: MealTag
   loggedAt: Date | null
@@ -31,7 +31,7 @@ type MealWithFoods = {
   createdAt: Date | null
   foods: Array<{
     id: number
-    mealId: number
+    mealId: string
     name: string
     portionDescription: string | null
     calories: string
@@ -161,7 +161,7 @@ function HistoryPage() {
                     <Link
                       key={meal.id}
                       to="/history/$mealId"
-                      params={{ mealId: String(meal.id) }}
+                      params={{ mealId: meal.id }}
                       className="island-shell flex items-center gap-3 rounded-2xl p-4 transition hover:shadow-lg"
                     >
                       <span className="text-2xl">{MEAL_TAG_EMOJI[meal.tag]}</span>

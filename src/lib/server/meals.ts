@@ -184,7 +184,7 @@ export const getMealsByDateFn = createServerFn({ method: 'GET' })
   })
 
 const getMealDetailSchema = z.object({
-  mealId: z.number(),
+  mealId: z.string().uuid(),
 })
 
 export const getMealDetailFn = createServerFn({ method: 'GET' })
@@ -211,7 +211,7 @@ export const getMealDetailFn = createServerFn({ method: 'GET' })
   })
 
 const deleteMealSchema = z.object({
-  mealId: z.number(),
+  mealId: z.string().uuid(),
 })
 
 export const deleteMealFn = createServerFn({ method: 'POST' })

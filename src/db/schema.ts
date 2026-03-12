@@ -1,4 +1,4 @@
-import { boolean, integer, numeric, pgEnum, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core'
+import { boolean, integer, numeric, pgEnum, pgTable, serial, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
 export const todos = pgTable('todos', {
@@ -60,7 +60,7 @@ export const verification = pgTable('verification', {
 export const mealTagEnum = pgEnum('meal_tag', ['breakfast', 'lunch', 'dinner', 'snacks'])
 
 export const meals = pgTable('meals', {
-  id: serial('id').primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
   userId: text('user_id')
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
@@ -73,7 +73,7 @@ export const meals = pgTable('meals', {
 
 export const mealFoods = pgTable('meal_foods', {
   id: serial('id').primaryKey(),
-  mealId: integer('meal_id')
+  mealId: uuid('meal_id')
     .notNull()
     .references(() => meals.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),

@@ -3,7 +3,7 @@ builder = "nixpacks"
 buildCommand = "pnpm install --frozen-lockfile && pnpm build"
 
 [deploy]
-startCommand = "pnpm db:migrate && node .output/server/index.mjs"
+startCommand = "node .output/server/index.mjs"
 healthcheckPath = "/"
 healthcheckTimeout = 100
 restartPolicyType = "on_failure"
