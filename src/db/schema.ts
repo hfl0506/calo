@@ -1,4 +1,5 @@
-import { boolean, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core'
+import { boolean, integer, numeric, pgEnum, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core'
+import { relations } from 'drizzle-orm'
 
 export const todos = pgTable('todos', {
   id: serial().primaryKey(),
@@ -55,3 +56,43 @@ export const verification = pgTable('verification', {
   createdAt: timestamp('created_at'),
   updatedAt: timestamp('updated_at'),
 })
+
+export const mealTagEnum = pgEnum('meal_tag', ['breakfast', 'lunch', 'dinner', 'snacks'])
+
+export const meals = pgTable('meals', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  tag: mealTagEnum('tag').notNull(),
+  loggedAt: timestamp('logged_at').defaultNow(),
+  imageUrl: text('image_url'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+
+export const mealFoods = pgTable('meal_foods', {
+  id: serial('id').primaryKey(),
+  mealId: integer('meal_id')
+    .notNull()
+    .references(() => meals.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  portionDescription: text('portion_description'),
+  calories: numeric('calories', { precision: 8, scale: 2 }).notNull(),
+  protein: numeric('protein', { precision: 8, scale: 2 }),
+  carbs: numeric('carbs', { precision: 8, scale: 2 }),
+  fat: numeric('fat', { precision: 8, scale: 2 }),
+  fiber: numeric('fiber', { precision: 8, scale: 2 }),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+
+export const mealsRelations = relations(meals, ({ many }) => ({
+  mealFoods: many(mealFoods),
+}))
+
+export const mealFoodsRelations = relations(mealFoods, ({ one }) => ({
+  meal: one(meals, {
+    fields: [mealFoods.mealId],
+    references: [meals.id],
+  }),
+}))
