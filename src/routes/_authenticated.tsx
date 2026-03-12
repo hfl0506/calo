@@ -13,7 +13,7 @@ function AuthenticatedLayout() {
 
   useEffect(() => {
     if (!isPending && !session) {
-      void navigate({ to: "sign-in" });
+      void navigate({ to: "/sign-in" });
     }
   }, [session, isPending, navigate]);
 
