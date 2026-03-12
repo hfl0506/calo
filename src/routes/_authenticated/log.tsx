@@ -44,7 +44,7 @@ function LogMealPage() {
 
       setFoods(result.foods)
       setStep('review')
-    } catch (err) {
+    } catch {
       setError('Failed to analyze image. Please try again.')
       setStep('pick')
     }
@@ -98,7 +98,7 @@ function LogMealPage() {
         },
       })
       await navigate({ to: '/', search: { saved: true } })
-    } catch (err) {
+    } catch {
       setError('Failed to save meal. Please try again.')
       setIsSaving(false)
     }
