@@ -6,6 +6,7 @@ import ImagePicker from '#/components/log/ImagePicker'
 import MealTagPicker from '#/components/log/MealTagPicker'
 import NutritionSummaryBar from '#/components/log/NutritionSummaryBar'
 import { analyzeImageFn, saveMealFn } from '#/lib/server/meals'
+import { getMealUploadUrlFn } from '#/lib/server/upload'
 import type { AnalyzedFood } from '#/lib/types'
 
 export const Route = createFileRoute('/_authenticated/log')({
@@ -22,9 +23,11 @@ function LogMealPage() {
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [retryData, setRetryData] = useState<{ base64: string; mimeType: string } | null>(null)
+  const [imageData, setImageData] = useState<{ base64: string; mimeType: string } | null>(null)
 
   const handleImage = async (base64: string, mimeType: string) => {
     setRetryData({ base64, mimeType })
+    setImageData({ base64, mimeType })
     setError(null)
     setStep('analyzing')
 
@@ -53,14 +56,45 @@ function LogMealPage() {
     }
   }
 
+  const uploadImageToR2 = async (base64: string, mimeType: string): Promise<string | null> => {
+    const date = new Date().toISOString().split('T')[0]!
+    const fileName = `meal_${Date.now()}`
+    const { presignedUrl, publicUrl } = await getMealUploadUrlFn({
+      data: { fileName, contentType: mimeType as 'image/jpeg' | 'image/png' | 'image/webp', date },
+    })
+
+    const binary = atob(base64)
+    const bytes = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i)
+    }
+    const blob = new Blob([bytes], { type: mimeType })
+
+    const res = await fetch(presignedUrl, {
+      method: 'PUT',
+      body: blob,
+      headers: { 'Content-Type': mimeType },
+    })
+
+    if (!res.ok) throw new Error(`Upload failed: ${res.status}`)
+    return publicUrl
+  }
+
   const handleSave = async () => {
     if (foods.length === 0) return
     setIsSaving(true)
     try {
+      let imageUrl: string | undefined
+      if (imageData) {
+        const url = await uploadImageToR2(imageData.base64, imageData.mimeType)
+        imageUrl = url ?? undefined
+      }
+
       await saveMealFn({
         data: {
           tag: tag as 'breakfast' | 'lunch' | 'dinner' | 'snacks',
           foods,
+          imageUrl,
         },
       })
       await navigate({ to: '/', search: { saved: true } })

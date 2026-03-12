@@ -2,11 +2,23 @@ import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
 import { eq, and, gte, lt } from 'drizzle-orm'
 import OpenAI from 'openai'
+import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { z } from 'zod'
 import { db } from '#/db'
 import { meals, mealFoods } from '#/db/schema'
 import { auth } from '#/lib/auth'
 import type { AnalyzedFood, MealTag } from '#/lib/types'
+
+function getR2Client() {
+  return new S3Client({
+    region: 'auto',
+    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+    },
+  })
+}
 
 async function getSession() {
   const req = getRequest()
@@ -98,6 +110,7 @@ const saveMealSchema = z.object({
     }),
   ),
   loggedAt: z.string().optional(),
+  imageUrl: z.string().optional(),
 })
 
 export const saveMealFn = createServerFn({ method: 'POST' })
@@ -114,6 +127,7 @@ export const saveMealFn = createServerFn({ method: 'POST' })
         userId: session.user.id,
         tag: data.tag as MealTag,
         loggedAt,
+        imageUrl: data.imageUrl ?? null,
       })
       .returning({ id: meals.id })
 
@@ -223,6 +237,16 @@ export const deleteMealFn = createServerFn({ method: 'POST' })
     if (meal.userId !== session.user.id) throw new Error('Unauthorized')
 
     await db.delete(meals).where(eq(meals.id, data.mealId))
+
+    if (meal.imageUrl && process.env.R2_PUBLIC_URL) {
+      const key = meal.imageUrl.replace(`${process.env.R2_PUBLIC_URL}/`, '')
+      try {
+        const r2 = getR2Client()
+        await r2.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME!, Key: key }))
+      } catch {
+        // R2 deletion is best-effort; DB record is already gone
+      }
+    }
 
     return { success: true }
   })

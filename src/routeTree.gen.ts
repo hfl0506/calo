@@ -14,6 +14,7 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as DemoBetterAuthRouteImport } from './routes/demo/better-auth'
 import { Route as AuthenticatedLogRouteImport } from './routes/_authenticated/log'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
+import { Route as AuthenticatedHistoryIndexRouteImport } from './routes/_authenticated/history.index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthenticatedHistoryMealIdRouteImport } from './routes/_authenticated/history.$mealId'
 
@@ -41,6 +42,12 @@ const AuthenticatedHistoryRoute = AuthenticatedHistoryRouteImport.update({
   path: '/history',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedHistoryIndexRoute =
+  AuthenticatedHistoryIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedHistoryRoute,
+  } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -60,14 +67,15 @@ export interface FileRoutesByFullPath {
   '/demo/better-auth': typeof DemoBetterAuthRoute
   '/history/$mealId': typeof AuthenticatedHistoryMealIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/history/': typeof AuthenticatedHistoryIndexRoute
 }
 export interface FileRoutesByTo {
-  '/history': typeof AuthenticatedHistoryRouteWithChildren
   '/log': typeof AuthenticatedLogRoute
   '/demo/better-auth': typeof DemoBetterAuthRoute
   '/': typeof AuthenticatedIndexRoute
   '/history/$mealId': typeof AuthenticatedHistoryMealIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/history': typeof AuthenticatedHistoryIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/history/$mealId': typeof AuthenticatedHistoryMealIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_authenticated/history/': typeof AuthenticatedHistoryIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -88,14 +97,15 @@ export interface FileRouteTypes {
     | '/demo/better-auth'
     | '/history/$mealId'
     | '/api/auth/$'
+    | '/history/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/history'
     | '/log'
     | '/demo/better-auth'
     | '/'
     | '/history/$mealId'
     | '/api/auth/$'
+    | '/history'
   id:
     | '__root__'
     | '/_authenticated'
@@ -105,6 +115,7 @@ export interface FileRouteTypes {
     | '/_authenticated/'
     | '/_authenticated/history/$mealId'
     | '/api/auth/$'
+    | '/_authenticated/history/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -150,6 +161,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHistoryRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/history/': {
+      id: '/_authenticated/history/'
+      path: '/'
+      fullPath: '/history/'
+      preLoaderRoute: typeof AuthenticatedHistoryIndexRouteImport
+      parentRoute: typeof AuthenticatedHistoryRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -169,10 +187,12 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedHistoryRouteChildren {
   AuthenticatedHistoryMealIdRoute: typeof AuthenticatedHistoryMealIdRoute
+  AuthenticatedHistoryIndexRoute: typeof AuthenticatedHistoryIndexRoute
 }
 
 const AuthenticatedHistoryRouteChildren: AuthenticatedHistoryRouteChildren = {
   AuthenticatedHistoryMealIdRoute: AuthenticatedHistoryMealIdRoute,
+  AuthenticatedHistoryIndexRoute: AuthenticatedHistoryIndexRoute,
 }
 
 const AuthenticatedHistoryRouteWithChildren =

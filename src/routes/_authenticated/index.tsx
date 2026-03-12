@@ -172,9 +172,16 @@ function HomePage() {
               key={meal.id}
               to="/history/$mealId"
               params={{ mealId: String(meal.id) }}
-              className="island-shell block rounded-2xl p-4 transition hover:shadow-lg"
+              className="island-shell block overflow-hidden rounded-2xl transition hover:shadow-lg"
             >
-              <div className="flex items-center gap-3">
+              {meal.imageUrl && (
+                <img
+                  src={meal.imageUrl}
+                  alt={MEAL_TAG_LABEL[meal.tag]}
+                  className="h-36 w-full object-cover"
+                />
+              )}
+              <div className="flex items-center gap-3 p-4">
                 <span className="text-2xl">{MEAL_TAG_EMOJI[meal.tag]}</span>
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
