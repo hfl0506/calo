@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { db } from '#/db'
 import { meals, mealFoods } from '#/db/schema'
 import { auth } from '#/lib/auth'
+import { calcTotals } from '#/lib/nutrition'
 import type { AnalyzedFood, MealTag } from '#/lib/types'
 
 function getR2Client() {
@@ -178,17 +179,12 @@ export const getMealsByDateFn = createServerFn({ method: 'GET' })
     return mealRows.map((meal) => ({
       ...meal,
       foods: meal.mealFoods,
-      totals: {
-        calories: meal.mealFoods.reduce((sum, f) => sum + parseFloat(f.calories), 0),
-        protein: meal.mealFoods.reduce((sum, f) => sum + parseFloat(f.protein ?? '0'), 0),
-        carbs: meal.mealFoods.reduce((sum, f) => sum + parseFloat(f.carbs ?? '0'), 0),
-        fat: meal.mealFoods.reduce((sum, f) => sum + parseFloat(f.fat ?? '0'), 0),
-      },
+      totals: calcTotals(meal.mealFoods),
     }))
   })
 
 const getMealDetailSchema = z.object({
-  mealId: z.number(),
+  mealId: z.string().uuid(),
 })
 
 export const getMealDetailFn = createServerFn({ method: 'GET' })
@@ -210,17 +206,12 @@ export const getMealDetailFn = createServerFn({ method: 'GET' })
     return {
       ...meal,
       foods: meal.mealFoods,
-      totals: {
-        calories: meal.mealFoods.reduce((sum, f) => sum + parseFloat(f.calories), 0),
-        protein: meal.mealFoods.reduce((sum, f) => sum + parseFloat(f.protein ?? '0'), 0),
-        carbs: meal.mealFoods.reduce((sum, f) => sum + parseFloat(f.carbs ?? '0'), 0),
-        fat: meal.mealFoods.reduce((sum, f) => sum + parseFloat(f.fat ?? '0'), 0),
-      },
+      totals: calcTotals(meal.mealFoods),
     }
   })
 
 const deleteMealSchema = z.object({
-  mealId: z.number(),
+  mealId: z.string().uuid(),
 })
 
 export const deleteMealFn = createServerFn({ method: 'POST' })

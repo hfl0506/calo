@@ -12,7 +12,7 @@ export interface AnalyzedFood {
 
 export interface MealFood {
   id: number
-  mealId: number
+  mealId: string
   name: string
   portionDescription: string | null
   calories: string
@@ -24,7 +24,7 @@ export interface MealFood {
 }
 
 export interface Meal {
-  id: number
+  id: string
   userId: string
   tag: MealTag
   loggedAt: Date | null

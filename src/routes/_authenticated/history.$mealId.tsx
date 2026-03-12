@@ -22,7 +22,7 @@ const MEAL_TAG_LABEL: Record<MealTag, string> = {
 }
 
 type MealDetail = {
-  id: number
+  id: string
   userId: string
   tag: MealTag
   loggedAt: Date | null
@@ -31,7 +31,7 @@ type MealDetail = {
   createdAt: Date | null
   foods: Array<{
     id: number
-    mealId: number
+    mealId: string
     name: string
     portionDescription: string | null
     calories: string
@@ -70,7 +70,7 @@ function MealDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
-    getMealDetailFn({ data: { mealId: Number(mealId) } })
+    getMealDetailFn({ data: { mealId } })
       .then((data) => setMeal(data as MealDetail))
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load meal'))
       .finally(() => setIsLoading(false))
@@ -79,7 +79,7 @@ function MealDetailPage() {
   const handleDelete = async () => {
     setIsDeleting(true)
     try {
-      await deleteMealFn({ data: { mealId: Number(mealId) } })
+      await deleteMealFn({ data: { mealId } })
       await navigate({ to: '/history' })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete meal')
