@@ -1,9 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { authClient } from '#/lib/auth-client'
+import ThemeToggle from '#/components/ThemeToggle'
 
 export const Route = createFileRoute('/demo/better-auth')({
   component: AuthPage,
@@ -32,10 +33,30 @@ type SignUpValues = z.infer<typeof signUpSchema>
 function AuthPage() {
   const [tab, setTab] = useState<'signin' | 'signup'>('signin')
   const navigate = useNavigate()
+  const { data: session, isPending } = authClient.useSession()
+
+  useEffect(() => {
+    if (!isPending && session) {
+      void navigate({ to: '/' })
+    }
+  }, [session, isPending, navigate])
+
+  if (isPending || session) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent" />
+      </div>
+    )
+  }
 
   return (
-    <main className="page-wrap flex min-h-[calc(100vh-8rem)] items-center justify-center px-4 py-12">
-      <div className="island-shell rise-in w-full max-w-md rounded-2xl p-8">
+    <div className="flex min-h-screen flex-col">
+      <div className="flex h-14 items-center justify-between border-b border-[var(--line)] px-4">
+        <span className="text-base font-semibold text-[var(--sea-ink)]">Check Cal</span>
+        <ThemeToggle />
+      </div>
+    <main className="flex flex-1 items-center justify-center px-4 py-10">
+      <div className="island-shell rise-in w-full max-w-sm rounded-2xl p-6">
         <h1 className="mb-1 text-2xl font-bold text-[var(--sea-ink)]">
           {tab === 'signin' ? 'Welcome back' : 'Create account'}
         </h1>
@@ -77,6 +98,7 @@ function AuthPage() {
         )}
       </div>
     </main>
+    </div>
   )
 }
 
