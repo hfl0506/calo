@@ -5,7 +5,7 @@ import FoodReviewList from '#/components/log/FoodReviewList'
 import ImagePicker from '#/components/log/ImagePicker'
 import MealTagPicker from '#/components/log/MealTagPicker'
 import NutritionSummaryBar from '#/components/log/NutritionSummaryBar'
-import { analyzeImageFn, saveMealFn } from '#/lib/server/meals'
+import { analyzeImageFn, analyzePromptFn, saveMealFn } from '#/lib/server/meals'
 import { getMealUploadUrlFn } from '#/lib/server/upload'
 import type { AnalyzedFood } from '#/lib/types'
 
@@ -46,6 +46,29 @@ function LogMealPage() {
       setStep('review')
     } catch {
       setError('Failed to analyze image. Please try again.')
+      setStep('pick')
+    }
+  }
+
+  const handlePrompt = async (prompt: string) => {
+    setError(null)
+    setImageData(null)
+    setRetryData(null)
+    setStep('analyzing')
+
+    try {
+      const result = await analyzePromptFn({ data: { prompt } })
+
+      if (result.error && result.foods.length === 0) {
+        setError(result.error)
+        setStep('pick')
+        return
+      }
+
+      setFoods(result.foods)
+      setStep('review')
+    } catch {
+      setError('Failed to analyze your description. Please try again.')
       setStep('pick')
     }
   }
@@ -151,10 +174,13 @@ function LogMealPage() {
 
         {step === 'pick' && (
           <div className="rise-in">
-            <p className="mb-6 text-center text-sm text-[var(--sea-ink-soft)]">
-              Take a photo of your meal and we'll identify the foods and calories automatically.
+            <p className="mb-4 text-center text-sm text-[var(--sea-ink-soft)]">
+              Snap a photo or describe your meal to get calorie estimates.
             </p>
-            <ImagePicker onImage={(base64, mimeType) => void handleImage(base64, mimeType)} />
+            <ImagePicker
+              onImage={(base64, mimeType) => void handleImage(base64, mimeType)}
+              onPrompt={(prompt) => void handlePrompt(prompt)}
+            />
           </div>
         )}
 

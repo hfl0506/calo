@@ -9,7 +9,7 @@ export default function Header({ user }: { user: User }) {
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--line)] bg-[var(--header-bg)] px-4 backdrop-blur-lg">
       <div className="flex h-14 items-center justify-between gap-3">
-        <span className="text-base font-semibold text-[var(--sea-ink)]">Check Cal</span>
+        <span className="text-base font-semibold text-[var(--sea-ink)]">Calo</span>
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
