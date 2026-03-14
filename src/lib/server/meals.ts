@@ -1,17 +1,16 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequest } from '@tanstack/react-start/server'
 import { eq, and, gte, lt } from 'drizzle-orm'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3'
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-const geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 import { z } from 'zod'
 import { db } from '#/db'
 import { meals, mealFoods } from '#/db/schema'
-import { auth } from '#/lib/auth'
 import { calcTotals } from '#/lib/nutrition'
+import { getSession } from '#/lib/server/session'
 import type { AnalyzedFood, MealTag } from '#/lib/types'
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+const geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
 /**
  * Convert a wall-clock datetime string (e.g. "2025-03-13T00:00:00") in the
@@ -59,11 +58,6 @@ function getR2Client() {
   })
 }
 
-async function getSession() {
-  const req = getRequest()
-  const session = await auth.api.getSession({ headers: req.headers })
-  return session
-}
 
 const analyzePromptSchema = z.object({
   prompt: z.string().min(1).max(500),
@@ -315,10 +309,10 @@ export const getMealsByDateFn = createServerFn({ method: 'GET' })
       orderBy: (meals, { desc }) => [desc(meals.loggedAt)],
     })
 
-    return mealRows.map((meal) => ({
+    return mealRows.map(({ mealFoods, ...meal }) => ({
       ...meal,
-      foods: meal.mealFoods,
-      totals: calcTotals(meal.mealFoods),
+      foods: mealFoods,
+      totals: calcTotals(mealFoods),
     }))
   })
 
@@ -348,10 +342,10 @@ export const getMealsRangeFn = createServerFn({ method: 'GET' })
       orderBy: (meals, { desc }) => [desc(meals.loggedAt)],
     })
 
-    return mealRows.map((meal) => ({
+    return mealRows.map(({ mealFoods, ...meal }) => ({
       ...meal,
-      foods: meal.mealFoods,
-      totals: calcTotals(meal.mealFoods),
+      foods: mealFoods,
+      totals: calcTotals(mealFoods),
     }))
   })
 
@@ -375,10 +369,11 @@ export const getMealDetailFn = createServerFn({ method: 'GET' })
     if (!meal) throw new Error('Meal not found')
     if (meal.userId !== session.user.id) throw new Error('Unauthorized')
 
+    const { mealFoods, ...mealData } = meal
     return {
-      ...meal,
-      foods: meal.mealFoods,
-      totals: calcTotals(meal.mealFoods),
+      ...mealData,
+      foods: mealFoods,
+      totals: calcTotals(mealFoods),
     }
   })
 
