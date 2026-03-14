@@ -36,9 +36,9 @@ function compressImage(file: File): Promise<{ base64: string; mimeType: string }
         }
         ctx.drawImage(img, 0, 0, width, height)
 
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+        const dataUrl = canvas.toDataURL('image/webp', 0.9)
         const base64 = dataUrl.split(',')[1] ?? ''
-        resolve({ base64, mimeType: 'image/jpeg' })
+        resolve({ base64, mimeType: 'image/webp' })
       }
       img.onerror = () => reject(new Error('Failed to load image'))
       img.src = e.target?.result as string
