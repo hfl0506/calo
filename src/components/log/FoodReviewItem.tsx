@@ -135,7 +135,11 @@ function MacroInput({
       <input
         type="number"
         value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+        min={0}
+        onChange={(e) => {
+          const n = parseFloat(e.target.value)
+          onChange(isFinite(n) && n >= 0 ? n : 0)
+        }}
         className="w-full rounded-lg border border-[rgba(50,143,151,0.3)] bg-white px-2 py-1 text-base text-[var(--sea-ink)] outline-none transition focus:border-[rgba(79,184,178,0.6)] focus:ring-1 focus:ring-[rgba(79,184,178,0.4)] dark:bg-neutral-900"
       />
     </div>

@@ -443,7 +443,7 @@ export const deleteMealFn = createServerFn({ method: 'POST' })
 
     if (!meal) throw new Error('Meal not found')
 
-    await db.delete(meals).where(eq(meals.id, data.mealId))
+    await db.delete(meals).where(and(eq(meals.id, data.mealId), eq(meals.userId, session.user.id)))
 
     if (meal.imageUrl && process.env.R2_PUBLIC_URL) {
       const key = meal.imageUrl.replace(`${process.env.R2_PUBLIC_URL}/`, '')
