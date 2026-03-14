@@ -4,7 +4,7 @@ buildCommand = "pnpm install --frozen-lockfile && pnpm build"
 
 [deploy]
 startCommand = "pnpm db:migrate && node .output/server/index.mjs"
-healthcheckPath = "/"
-healthcheckTimeout = 100
+healthcheckPath = "/api/health"
+healthcheckTimeout = 1000
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3

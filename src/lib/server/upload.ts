@@ -31,6 +31,7 @@ export const getMealUploadUrlFn = createServerFn({ method: 'POST' })
       Bucket: process.env.R2_BUCKET_NAME!,
       Key: key,
       ContentType: data.contentType,
+      CacheControl: 'public, max-age=31536000, immutable',
     })
 
     const presignedUrl = await getSignedUrl(r2, command, { expiresIn: 300 })
