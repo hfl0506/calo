@@ -213,8 +213,12 @@ function MealDetailPage() {
       {/* Image lightbox */}
       {showLightbox && meal?.imageUrl && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Meal image lightbox"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-          onClick={() => setShowLightbox(false)}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowLightbox(false) }}
+          onKeyDown={(e) => { if (e.key === 'Escape') setShowLightbox(false) }}
         >
           <button
             type="button"
@@ -241,7 +245,6 @@ function MealDetailPage() {
             src={meal.imageUrl}
             alt="Meal"
             className="max-h-[85vh] max-w-[90vw] rounded-lg object-contain"
-            onClick={(e) => e.stopPropagation()}
           />
         </div>
       )}

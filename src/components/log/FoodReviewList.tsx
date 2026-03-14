@@ -40,7 +40,7 @@ export default memo(function FoodReviewList({ foods, onChange }: FoodReviewListP
     <div className="space-y-3">
       {foods.map((food, index) => (
         <FoodReviewItem
-          key={food.id ?? index}
+          key={food.id}
           food={food}
           onChange={(updated) => handleChange(index, updated)}
           onDelete={() => handleDelete(index)}

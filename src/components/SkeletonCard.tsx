@@ -112,8 +112,8 @@ export function MealDetailSkeleton() {
         {/* Foods section */}
         <div className="space-y-2">
           <Skeleton width={64} height={13} borderRadius={6} />
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="island-shell rounded-2xl p-4">
+          {['food-0', 'food-1', 'food-2'].map((id) => (
+            <div key={id} className="island-shell rounded-2xl p-4">
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
                   <Skeleton width={120} height={13} borderRadius={6} />
