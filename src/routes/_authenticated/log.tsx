@@ -9,6 +9,9 @@ import { analyzeImageFn, analyzePromptFn, recalculateNutritionFn, saveMealFn } f
 import { getMealUploadUrlFn } from '#/lib/server/upload'
 import type { AnalyzedFood } from '#/lib/types'
 
+const withIds = (foods: AnalyzedFood[]): AnalyzedFood[] =>
+  foods.map((f) => ({ ...f, id: f.id ?? crypto.randomUUID() }))
+
 export const Route = createFileRoute('/_authenticated/log')({
   component: LogMealPage,
 })
@@ -44,7 +47,7 @@ function LogMealPage() {
         return
       }
 
-      setFoods(result.foods)
+      setFoods(withIds(result.foods))
       setStep('review')
     } catch {
       setError('Failed to analyze image. Please try again.')
@@ -67,7 +70,7 @@ function LogMealPage() {
         return
       }
 
-      setFoods(result.foods)
+      setFoods(withIds(result.foods))
       setStep('review')
     } catch {
       setError('Failed to analyze your description. Please try again.')

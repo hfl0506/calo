@@ -19,6 +19,7 @@ export default function FoodReviewList({ foods, onChange }: FoodReviewListProps)
 
   const handleAddManual = () => {
     const emptyFood: AnalyzedFood = {
+      id: crypto.randomUUID(),
       name: '',
       portionDescription: '',
       calories: 0,
@@ -34,7 +35,7 @@ export default function FoodReviewList({ foods, onChange }: FoodReviewListProps)
     <div className="space-y-3">
       {foods.map((food, index) => (
         <FoodReviewItem
-          key={index}
+          key={food.id ?? index}
           food={food}
           onChange={(updated) => handleChange(index, updated)}
           onDelete={() => handleDelete(index)}

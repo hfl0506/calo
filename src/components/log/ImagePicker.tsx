@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface ImagePickerProps {
   onImage: (base64: string, mimeType: string) => void
@@ -56,11 +56,18 @@ export default function ImagePicker({ onImage, onPrompt }: ImagePickerProps) {
   const [promptText, setPromptText] = useState('')
   const [mode, setMode] = useState<'photo' | 'text'>('photo')
 
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview)
+    }
+  }, [preview])
+
   const handleFile = async (file: File) => {
     if (!file) return
     setIsProcessing(true)
     try {
       const { base64, mimeType } = await compressImage(file)
+      if (preview) URL.revokeObjectURL(preview)
       const previewUrl = URL.createObjectURL(file)
       setPreview(previewUrl)
       onImage(base64, mimeType)

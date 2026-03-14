@@ -2,21 +2,8 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { getMealsByDateFn } from '#/lib/server/meals'
 import { getUserSettingsFn } from '#/lib/server/settings'
-import type { MealTag } from '#/lib/types'
-
-const MEAL_TAG_EMOJI: Record<MealTag, string> = {
-  breakfast: '🌅',
-  lunch: '☀️',
-  dinner: '🌙',
-  snacks: '🍎',
-}
-
-const MEAL_TAG_LABEL: Record<MealTag, string> = {
-  breakfast: 'Breakfast',
-  lunch: 'Lunch',
-  dinner: 'Dinner',
-  snacks: 'Snacks',
-}
+import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
+import type { Meal, MealTag } from '#/lib/types'
 
 function formatTime(date: Date | null): string {
   if (!date) return ''
@@ -27,37 +14,9 @@ export const Route = createFileRoute('/_authenticated/')({
   component: HomePage,
 })
 
-type MealWithFoods = {
-  id: string
-  userId: string
-  tag: MealTag
-  loggedAt: Date | null
-  imageUrl: string | null
-  notes: string | null
-  createdAt: Date | null
-  foods: Array<{
-    id: number
-    mealId: string
-    name: string
-    portionDescription: string | null
-    calories: string
-    protein: string | null
-    carbs: string | null
-    fat: string | null
-    fiber: string | null
-    createdAt: Date | null
-  }>
-  totals: {
-    calories: number
-    protein: number
-    carbs: number
-    fat: number
-  }
-}
-
 function HomePage() {
   const navigate = useNavigate()
-  const [meals, setMeals] = useState<MealWithFoods[]>([])
+  const [meals, setMeals] = useState<Meal[]>([])
   const [dailyGoal, setDailyGoal] = useState(2000)
   const [isLoading, setIsLoading] = useState(true)
   const [savedNotice, setSavedNotice] = useState(false)
@@ -81,7 +40,7 @@ function HomePage() {
       getUserSettingsFn(),
     ])
       .then(([mealsData, settings]) => {
-        setMeals(mealsData as MealWithFoods[])
+        setMeals(mealsData as Meal[])
         setDailyGoal(settings.dailyCalorieGoal)
       })
       .catch(console.error)

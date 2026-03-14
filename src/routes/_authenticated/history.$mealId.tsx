@@ -1,25 +1,12 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { deleteMealFn, getMealDetailFn } from '#/lib/server/meals'
+import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
 import type { MealTag } from '#/lib/types'
 
 export const Route = createFileRoute('/_authenticated/history/$mealId')({
   component: MealDetailPage,
 })
-
-const MEAL_TAG_EMOJI: Record<MealTag, string> = {
-  breakfast: '🌅',
-  lunch: '☀️',
-  dinner: '🌙',
-  snacks: '🍎',
-}
-
-const MEAL_TAG_LABEL: Record<MealTag, string> = {
-  breakfast: 'Breakfast',
-  lunch: 'Lunch',
-  dinner: 'Dinner',
-  snacks: 'Snacks',
-}
 
 type MealDetail = {
   id: string

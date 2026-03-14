@@ -1,6 +1,21 @@
 export type MealTag = 'breakfast' | 'lunch' | 'dinner' | 'snacks'
 
+export const MEAL_TAG_EMOJI: Record<MealTag, string> = {
+  breakfast: '🌅',
+  lunch: '☀️',
+  dinner: '🌙',
+  snacks: '🍎',
+}
+
+export const MEAL_TAG_LABEL: Record<MealTag, string> = {
+  breakfast: 'Breakfast',
+  lunch: 'Lunch',
+  dinner: 'Dinner',
+  snacks: 'Snacks',
+}
+
 export interface AnalyzedFood {
+  id?: string
   name: string
   portionDescription: string
   calories: number

@@ -1,53 +1,12 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
 import { getMealsRangeFn } from '#/lib/server/meals'
-import type { MealTag } from '#/lib/types'
+import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
+import type { Meal } from '#/lib/types'
 
 export const Route = createFileRoute('/_authenticated/history/')({
   component: HistoryPage,
 })
-
-const MEAL_TAG_EMOJI: Record<MealTag, string> = {
-  breakfast: '🌅',
-  lunch: '☀️',
-  dinner: '🌙',
-  snacks: '🍎',
-}
-
-const MEAL_TAG_LABEL: Record<MealTag, string> = {
-  breakfast: 'Breakfast',
-  lunch: 'Lunch',
-  dinner: 'Dinner',
-  snacks: 'Snacks',
-}
-
-type MealWithFoods = {
-  id: string
-  userId: string
-  tag: MealTag
-  loggedAt: Date | null
-  imageUrl: string | null
-  notes: string | null
-  createdAt: Date | null
-  foods: Array<{
-    id: number
-    mealId: string
-    name: string
-    portionDescription: string | null
-    calories: string
-    protein: string | null
-    carbs: string | null
-    fat: string | null
-    fiber: string | null
-    createdAt: Date | null
-  }>
-  totals: {
-    calories: number
-    protein: number
-    carbs: number
-    fat: number
-  }
-}
 
 function formatTime(date: Date | null): string {
   if (!date) return ''
@@ -71,7 +30,7 @@ function formatDate(dateStr: string): string {
 const PAGE_DAYS = 7
 
 function HistoryPage() {
-  const [mealsByDate, setMealsByDate] = useState<Record<string, MealWithFoods[]>>({})
+  const [mealsByDate, setMealsByDate] = useState<Record<string, Meal[]>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
@@ -90,8 +49,8 @@ function HistoryPage() {
 
     const allMeals = await getMealsRangeFn({ data: { startDate, endDate, timezone: tz } })
 
-    const grouped: Record<string, MealWithFoods[]> = {}
-    for (const meal of allMeals as MealWithFoods[]) {
+    const grouped: Record<string, Meal[]> = {}
+    for (const meal of allMeals as Meal[]) {
       const dateStr = new Date(meal.loggedAt!).toLocaleDateString('en-CA', { timeZone: tz })
       if (!grouped[dateStr]) grouped[dateStr] = []
       grouped[dateStr].push(meal)
@@ -121,12 +80,17 @@ function HistoryPage() {
     if (!oldestDate || isLoadingMoreRef.current) return
     isLoadingMoreRef.current = true
     setIsLoadingMore(true)
-    const prev = new Date(oldestDate + 'T00:00:00')
-    prev.setDate(prev.getDate() - 1)
-    const newEnd = prev.toLocaleDateString('en-CA', { timeZone: tz })
-    await fetchRange(newEnd, true)
-    isLoadingMoreRef.current = false
-    setIsLoadingMore(false)
+    try {
+      const prev = new Date(oldestDate + 'T00:00:00')
+      prev.setDate(prev.getDate() - 1)
+      const newEnd = prev.toLocaleDateString('en-CA', { timeZone: tz })
+      await fetchRange(newEnd, true)
+    } catch {
+      // silently stop — don't leave spinner stuck
+    } finally {
+      isLoadingMoreRef.current = false
+      setIsLoadingMore(false)
+    }
   }
 
   useEffect(() => {
