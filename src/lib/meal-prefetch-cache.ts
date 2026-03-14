@@ -3,8 +3,9 @@ import { getMealDetailFn } from '#/lib/server/meals'
 const TTL = 30_000   // entries expire after 30s
 const MAX_SIZE = 20  // never hold more than 20 meals in memory
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const cache = new Map<string, { data: any; fetchedAt: number }>()
+type CacheEntry = { data: Awaited<ReturnType<typeof getMealDetailFn>>; fetchedAt: number }
+
+const cache = new Map<string, CacheEntry>()
 const inflight = new Set<string>() // deduplicates concurrent prefetch calls
 
 function evictExpired(): void {
@@ -20,9 +21,20 @@ function evictOldest(): void {
   if (firstKey) cache.delete(firstKey)
 }
 
-// Proactively sweep expired entries every 60s
+// Proactively sweep expired entries every 60s — store ID so it can be cancelled
+let evictIntervalId: ReturnType<typeof setInterval> | undefined
 if (typeof window !== 'undefined') {
-  setInterval(evictExpired, 60_000)
+  evictIntervalId = setInterval(evictExpired, 60_000)
+}
+
+// Call this on sign-out to prevent data leaking to the next user
+export function clearPrefetchCache(): void {
+  cache.clear()
+  inflight.clear()
+  if (evictIntervalId !== undefined) {
+    clearInterval(evictIntervalId)
+    evictIntervalId = undefined
+  }
 }
 
 export function getCachedMealDetail(mealId: string) {

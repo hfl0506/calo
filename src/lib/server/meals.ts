@@ -13,6 +13,20 @@ import type { AnalyzedFood, MealTag } from '#/lib/types'
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
 const geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
+// Zod schemas for validating Gemini JSON responses
+const analyzedFoodSchema = z.object({
+  id: z.string().optional(),
+  name: z.string(),
+  portionDescription: z.string().default(''),
+  calories: z.number(),
+  protein: z.number().default(0),
+  carbs: z.number().default(0),
+  fat: z.number().default(0),
+  fiber: z.number().default(0),
+})
+
+const analyzedFoodsArraySchema = z.array(analyzedFoodSchema)
+
 /**
  * Convert a wall-clock datetime string (e.g. "2025-03-13T00:00:00") in the
  * given IANA timezone to an absolute UTC Date.
@@ -101,8 +115,9 @@ Adjustment: "${data.adjustmentPrompt}"`
       const content = result.response.text()
       const cleaned = content.replace(/```[a-z]*\n?/gi, '').trim()
 
-      const food = JSON.parse(cleaned) as AnalyzedFood
-      return { food }
+      const parsed = analyzedFoodSchema.safeParse(JSON.parse(cleaned))
+      if (!parsed.success) return { error: 'Invalid nutrition data returned' }
+      return { food: parsed.data }
     } catch {
       return { error: 'Failed to recalculate nutrition' }
     }
@@ -147,25 +162,24 @@ User message: ${prompt}`
       const content = result.response.text()
       const cleaned = content.replace(/```[a-z]*\n?/gi, '').trim()
 
-      let parsed: unknown
+      let raw: unknown
       try {
-        parsed = JSON.parse(cleaned)
+        raw = JSON.parse(cleaned)
       } catch {
         return { foods: [] as AnalyzedFood[], error: 'Could not parse nutrition response' }
       }
 
       // Check for guardrail rejection
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && (parsed as Record<string, unknown>).error === 'NOT_FOOD') {
+      if (raw && typeof raw === 'object' && !Array.isArray(raw) && (raw as Record<string, unknown>).error === 'NOT_FOOD') {
         return { foods: [] as AnalyzedFood[], error: 'Please describe a food or meal. I can only help with food-related prompts.' }
       }
 
-      const foods = parsed as AnalyzedFood[]
-
-      if (!Array.isArray(foods) || foods.length === 0) {
+      const parsed = analyzedFoodsArraySchema.safeParse(raw)
+      if (!parsed.success || parsed.data.length === 0) {
         return { foods: [] as AnalyzedFood[], error: 'No food items detected. Try describing what you ate, e.g. "a bowl of rice with grilled chicken".' }
       }
 
-      return { foods }
+      return { foods: parsed.data }
     } catch {
       return { foods: [] as AnalyzedFood[], error: 'Failed to analyze your description. Please try again.' }
     }
@@ -206,18 +220,19 @@ All numeric values must be numbers (not strings). If no food is visible return [
       const content = result.response.text()
       const cleaned = content.replace(/```[a-z]*\n?/gi, '').trim()
 
-      let foods: AnalyzedFood[] = []
+      let raw: unknown
       try {
-        foods = JSON.parse(cleaned) as AnalyzedFood[]
+        raw = JSON.parse(cleaned)
       } catch {
         return { foods: [] as AnalyzedFood[], error: 'Could not parse nutrition response' }
       }
 
-      if (!foods.length) {
+      const parsed = analyzedFoodsArraySchema.safeParse(raw)
+      if (!parsed.success || parsed.data.length === 0) {
         return { foods: [] as AnalyzedFood[], error: 'No food items detected in the image' }
       }
 
-      return { foods }
+      return { foods: parsed.data }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       console.error('[analyzeImageFn] Gemini error:', message)

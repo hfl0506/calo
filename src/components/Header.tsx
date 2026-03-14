@@ -1,4 +1,5 @@
 import { authClient } from '#/lib/auth-client'
+import { clearPrefetchCache } from '#/lib/meal-prefetch-cache'
 import ThemeToggle from './ThemeToggle'
 
 type User = { name: string; email: string; image?: string | null }
@@ -19,7 +20,7 @@ export default function Header({ user }: { user: User }) {
               {initial}
             </div>
             <button
-              onClick={() => void authClient.signOut()}
+              onClick={() => { clearPrefetchCache(); void authClient.signOut() }}
               className="rounded-lg px-3 py-1.5 text-sm font-medium text-[var(--sea-ink-soft)] transition hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)]"
             >
               Sign out

@@ -144,20 +144,24 @@ function LogMealPage() {
     if (foods.length === 0) return
     navigator.vibrate?.(10)
 
+    // Snapshot state before navigating — prevents race if user retakes photo
+    const savedFoods = foods
+    const savedImageData = imageData
+
     // Navigate home immediately — save happens in the background
     await navigate({ to: '/', search: { saving: true } })
 
     try {
       let imageUrl: string | undefined
-      if (imageData) {
-        const url = await uploadImageToR2(imageData.base64, imageData.mimeType)
+      if (savedImageData) {
+        const url = await uploadImageToR2(savedImageData.base64, savedImageData.mimeType)
         imageUrl = url ?? undefined
       }
 
       await saveMealFn({
         data: {
           tag: tag as 'breakfast' | 'lunch' | 'dinner' | 'snacks',
-          foods,
+          foods: savedFoods,
           imageUrl,
         },
       })
@@ -244,8 +248,9 @@ function LogMealPage() {
                   type="text"
                   value={adjustmentPrompt}
                   onChange={(e) => setAdjustmentPrompt(e.target.value)}
+                  disabled={isAdjusting}
                   placeholder="e.g. coke zero, half of it, skip rice"
-                  className="flex-1 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] px-3 py-2 text-sm text-[var(--sea-ink)] outline-none transition focus:border-[var(--lagoon-deep)] placeholder:text-[var(--sea-ink-soft)]"
+                  className="flex-1 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] px-3 py-2 text-sm text-[var(--sea-ink)] outline-none transition focus:border-[var(--lagoon-deep)] placeholder:text-[var(--sea-ink-soft)] disabled:opacity-50"
                 />
                 <button
                   type="button"

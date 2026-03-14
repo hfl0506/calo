@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { deleteMealFn, getMealDetailFn } from '#/lib/server/meals'
 import { getCachedMealDetail } from '#/lib/meal-prefetch-cache'
 import { MealDetailSkeleton } from '#/components/SkeletonCard'
+import { formatDateTime } from '#/lib/format'
 import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
 import type { MealTag } from '#/lib/types'
 
@@ -36,17 +37,6 @@ type MealDetail = {
     carbs: number
     fat: number
   }
-}
-
-function formatDateTime(date: Date | null): string {
-  if (!date) return ''
-  return new Date(date).toLocaleString([], {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }
 
 function MealDetailPage() {

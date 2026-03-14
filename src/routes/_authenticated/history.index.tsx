@@ -3,17 +3,13 @@ import { useEffect, useRef, useState } from 'react'
 import { getMealsRangeFn } from '#/lib/server/meals'
 import { prefetchMealDetail } from '#/lib/meal-prefetch-cache'
 import { HistorySkeleton } from '#/components/SkeletonCard'
+import { formatTime } from '#/lib/format'
 import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
 import type { Meal } from '#/lib/types'
 
 export const Route = createFileRoute('/_authenticated/history/')({
   component: HistoryPage,
 })
-
-function formatTime(date: Date | null): string {
-  if (!date) return ''
-  return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-}
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr + 'T00:00:00')
@@ -88,7 +84,7 @@ function HistoryPage() {
       const newEnd = prev.toLocaleDateString('en-CA', { timeZone: tz })
       await fetchRange(newEnd, true)
     } catch {
-      // silently stop — don't leave spinner stuck
+      setHasMore(false) // stop retrying on error
     } finally {
       isLoadingMoreRef.current = false
       setIsLoadingMore(false)

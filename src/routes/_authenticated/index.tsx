@@ -1,17 +1,13 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import PullToRefresh from 'react-simple-pull-to-refresh'
 import { getMealsByDateFn } from '#/lib/server/meals'
 import { getUserSettingsFn } from '#/lib/server/settings'
 import { prefetchMealDetail } from '#/lib/meal-prefetch-cache'
 import { HomeSkeleton } from '#/components/SkeletonCard'
+import { formatTime } from '#/lib/format'
 import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
 import type { Meal, MealTag } from '#/lib/types'
-
-function formatTime(date: Date | null): string {
-  if (!date) return ''
-  return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-}
 
 export const Route = createFileRoute('/_authenticated/')({
   component: HomePage,
@@ -63,20 +59,20 @@ function HomePage() {
     fetchData().catch(console.error).finally(() => setIsLoading(false))
   }, [fetchData, refreshKey])
 
-  const totalCalories = meals.reduce((sum, m) => sum + m.totals.calories, 0)
-  const totalProtein = meals.reduce((sum, m) => sum + m.totals.protein, 0)
-  const totalCarbs = meals.reduce((sum, m) => sum + m.totals.carbs, 0)
-  const totalFat = meals.reduce((sum, m) => sum + m.totals.fat, 0)
-  const progressPercent = Math.min((totalCalories / dailyGoal) * 100, 100)
+  const { totalCalories, totalProtein, totalCarbs, totalFat, tagGroups } = useMemo(() => {
+    let totalCalories = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0
+    const tagGroups: Record<string, number> = {}
+    for (const m of meals) {
+      totalCalories += m.totals.calories
+      totalProtein  += m.totals.protein
+      totalCarbs    += m.totals.carbs
+      totalFat      += m.totals.fat
+      tagGroups[m.tag] = (tagGroups[m.tag] ?? 0) + m.totals.calories
+    }
+    return { totalCalories, totalProtein, totalCarbs, totalFat, tagGroups }
+  }, [meals])
 
-  const tagGroups = meals.reduce(
-    (acc, meal) => {
-      if (!acc[meal.tag]) acc[meal.tag] = 0
-      acc[meal.tag]! += meal.totals.calories
-      return acc
-    },
-    {} as Record<string, number>,
-  )
+  const progressPercent = Math.min((totalCalories / dailyGoal) * 100, 100)
 
   if (isLoading) return <HomeSkeleton />
 

@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import ThemeToggle from '#/components/ThemeToggle'
 import { authClient } from '#/lib/auth-client'
+import { clearPrefetchCache } from '#/lib/meal-prefetch-cache'
 import { getUserSettingsFn, updateUserSettingsFn } from '#/lib/server/settings'
 
 export const Route = createFileRoute('/_authenticated/settings')({
@@ -96,7 +97,7 @@ function SettingsPage() {
           <h2 className="mb-4 text-sm font-semibold text-[var(--sea-ink)]">Account</h2>
           <button
             type="button"
-            onClick={() => void authClient.signOut()}
+            onClick={() => { clearPrefetchCache(); void authClient.signOut() }}
             className="w-full rounded-xl border border-red-200 py-2.5 text-sm font-medium text-red-500 transition hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950"
           >
             Sign out
