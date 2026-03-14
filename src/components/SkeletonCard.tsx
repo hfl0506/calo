@@ -2,7 +2,7 @@ import Skeleton, { SkeletonTheme } from 'react-loading-skeleton'
 
 function Themed({ children }: { children: React.ReactNode }) {
   return (
-    <SkeletonTheme baseColor="var(--chip-bg)" highlightColor="var(--header-bg)">
+    <SkeletonTheme baseColor="var(--skeleton-base)" highlightColor="var(--skeleton-highlight)">
       {children}
     </SkeletonTheme>
   )

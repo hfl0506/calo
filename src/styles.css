@@ -23,6 +23,8 @@
   --bg-base: #e7f3ec;
   --header-bg: rgba(251, 255, 248, 0.84);
   --chip-bg: rgba(255, 255, 255, 0.8);
+  --skeleton-base: rgba(200, 220, 216, 0.55);
+  --skeleton-highlight: rgba(235, 248, 245, 0.9);
   --chip-line: rgba(47, 106, 74, 0.18);
   --link-bg-hover: rgba(255, 255, 255, 0.9);
   --hero-a: rgba(79, 184, 178, 0.36);
@@ -83,6 +85,8 @@
   --link-bg-hover: rgba(24, 44, 49, 0.8);
   --hero-a: rgba(96, 215, 207, 0.18);
   --hero-b: rgba(110, 200, 154, 0.12);
+  --skeleton-base: rgba(22, 44, 50, 0.95);
+  --skeleton-highlight: rgba(38, 70, 78, 0.95);
 
   --background: oklch(0.141 0.005 285.823);
   --foreground: oklch(0.985 0 0);
