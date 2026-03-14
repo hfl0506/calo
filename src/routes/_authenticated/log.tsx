@@ -80,7 +80,8 @@ function LogMealPage() {
   }
 
   const uploadImageToR2 = async (base64: string, mimeType: string): Promise<string | null> => {
-    const date = new Date().toISOString().split('T')[0]!
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const date = new Date().toLocaleDateString('en-CA', { timeZone: tz })
     const fileName = `meal_${Date.now()}`
     const { presignedUrl, publicUrl } = await getMealUploadUrlFn({
       data: { fileName, contentType: mimeType as 'image/jpeg' | 'image/png' | 'image/webp', date },

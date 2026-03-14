@@ -56,12 +56,15 @@ function formatTime(date: Date | null): string {
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr + 'T00:00:00')
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
   const today = new Date()
+  const todayStr = today.toLocaleDateString('en-CA', { timeZone: tz })
   const yesterday = new Date(today)
   yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayStr = yesterday.toLocaleDateString('en-CA', { timeZone: tz })
 
-  if (dateStr === today.toISOString().split('T')[0]) return 'Today'
-  if (dateStr === yesterday.toISOString().split('T')[0]) return 'Yesterday'
+  if (dateStr === todayStr) return 'Today'
+  if (dateStr === yesterdayStr) return 'Yesterday'
   return date.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })
 }
 
@@ -72,14 +75,15 @@ function HistoryPage() {
   useEffect(() => {
     const fetchLast7Days = async () => {
       const results: Record<string, MealWithFoods[]> = {}
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
       const today = new Date()
 
       await Promise.all(
         Array.from({ length: 7 }, (_, i) => {
           const date = new Date(today)
           date.setDate(date.getDate() - i)
-          const dateStr = date.toISOString().split('T')[0]!
-          return getMealsByDateFn({ data: { date: dateStr } }).then((meals) => {
+          const dateStr = date.toLocaleDateString('en-CA', { timeZone: tz }) // YYYY-MM-DD in local tz
+          return getMealsByDateFn({ data: { date: dateStr, timezone: tz } }).then((meals) => {
             if (meals.length > 0) {
               results[dateStr] = meals as MealWithFoods[]
             }

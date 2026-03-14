@@ -73,8 +73,9 @@ function HomePage() {
   }, [search, navigate])
 
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0]!
-    getMealsByDateFn({ data: { date: today } })
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: tz }) // YYYY-MM-DD in local tz
+    getMealsByDateFn({ data: { date: today, timezone: tz } })
       .then((data) => {
         setMeals(data as MealWithFoods[])
       })
@@ -83,6 +84,9 @@ function HomePage() {
   }, [])
 
   const totalCalories = meals.reduce((sum, m) => sum + m.totals.calories, 0)
+  const totalProtein = meals.reduce((sum, m) => sum + m.totals.protein, 0)
+  const totalCarbs = meals.reduce((sum, m) => sum + m.totals.carbs, 0)
+  const totalFat = meals.reduce((sum, m) => sum + m.totals.fat, 0)
   const progressPercent = Math.min((totalCalories / DAILY_GOAL) * 100, 100)
 
   const tagGroups = meals.reduce(
@@ -127,6 +131,28 @@ function HomePage() {
             className="h-full rounded-full bg-[var(--lagoon-deep)] transition-all duration-500"
             style={{ width: `${progressPercent}%` }}
           />
+        </div>
+
+        {/* Macro totals */}
+        <div className="mb-4 grid grid-cols-3 gap-3">
+          <div className="flex flex-col items-center rounded-xl bg-[var(--chip-bg)] py-2">
+            <span className="text-base font-bold text-[var(--sea-ink)]">
+              {Math.round(totalProtein * 10) / 10}g
+            </span>
+            <span className="text-xs text-[var(--sea-ink-soft)]">Protein</span>
+          </div>
+          <div className="flex flex-col items-center rounded-xl bg-[var(--chip-bg)] py-2">
+            <span className="text-base font-bold text-[var(--sea-ink)]">
+              {Math.round(totalCarbs * 10) / 10}g
+            </span>
+            <span className="text-xs text-[var(--sea-ink-soft)]">Carbs</span>
+          </div>
+          <div className="flex flex-col items-center rounded-xl bg-[var(--chip-bg)] py-2">
+            <span className="text-base font-bold text-[var(--sea-ink)]">
+              {Math.round(totalFat * 10) / 10}g
+            </span>
+            <span className="text-xs text-[var(--sea-ink-soft)]">Fat</span>
+          </div>
         </div>
 
         {/* Per-meal-tag breakdown */}

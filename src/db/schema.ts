@@ -65,10 +65,10 @@ export const meals = pgTable('meals', {
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
   tag: mealTagEnum('tag').notNull(),
-  loggedAt: timestamp('logged_at').defaultNow(),
+  loggedAt: timestamp('logged_at', { withTimezone: true }).defaultNow(),
   imageUrl: text('image_url'),
   notes: text('notes'),
-  createdAt: timestamp('created_at').defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 })
 
 export const mealFoods = pgTable('meal_foods', {
@@ -83,7 +83,7 @@ export const mealFoods = pgTable('meal_foods', {
   carbs: numeric('carbs', { precision: 8, scale: 2 }),
   fat: numeric('fat', { precision: 8, scale: 2 }),
   fiber: numeric('fiber', { precision: 8, scale: 2 }),
-  createdAt: timestamp('created_at').defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 })
 
 export const mealsRelations = relations(meals, ({ many }) => ({
