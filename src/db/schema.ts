@@ -1,4 +1,4 @@
-import { boolean, numeric, pgEnum, pgTable, serial, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { boolean, integer, numeric, pgEnum, pgTable, serial, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
 export const todos = pgTable('todos', {
@@ -57,6 +57,17 @@ export const verification = pgTable('verification', {
   updatedAt: timestamp('updated_at'),
 })
 
+export const userSettings = pgTable('user_settings', {
+  id: serial('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  dailyCalorieGoal: integer('daily_calorie_goal').notNull().default(2000),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+})
+
 export const mealTagEnum = pgEnum('meal_tag', ['breakfast', 'lunch', 'dinner', 'snacks'])
 
 export const meals = pgTable('meals', {
@@ -85,6 +96,13 @@ export const mealFoods = pgTable('meal_foods', {
   fiber: numeric('fiber', { precision: 8, scale: 2 }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
 })
+
+export const userSettingsRelations = relations(userSettings, ({ one }) => ({
+  user: one(user, {
+    fields: [userSettings.userId],
+    references: [user.id],
+  }),
+}))
 
 export const mealsRelations = relations(meals, ({ many }) => ({
   mealFoods: many(mealFoods),

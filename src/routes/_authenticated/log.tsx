@@ -129,7 +129,7 @@ function LogMealPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-56px)] flex-col">
+    <div className="flex min-h-screen flex-col">
       {/* Page header */}
       <div className="flex h-12 items-center justify-between border-b border-[var(--line)] bg-[var(--header-bg)] px-4">
         <h1 className="text-base font-semibold text-[var(--sea-ink)]">Log Meal</h1>
@@ -208,7 +208,7 @@ function LogMealPage() {
 
       {/* Save button fixed to bottom (only on review step) */}
       {step === 'review' && (
-        <div className="fixed bottom-0 left-0 right-0 border-t border-[var(--line)] bg-[var(--header-bg)] p-4 backdrop-blur-lg">
+        <div className="fixed bottom-14 left-0 right-0 z-40 border-t border-[var(--line)] bg-[var(--header-bg)] p-4 backdrop-blur-lg">
           <button
             type="button"
             disabled={isSaving || foods.length === 0}

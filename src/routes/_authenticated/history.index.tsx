@@ -102,26 +102,7 @@ function HistoryPage() {
 
   return (
     <div className="px-4 py-6 pb-24">
-      <div className="mb-6 flex items-center gap-3">
-        <Link
-          to="/"
-          className="flex h-9 w-9 items-center justify-center rounded-xl text-[var(--sea-ink-soft)] transition hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)]"
-          aria-label="Back"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </Link>
+      <div className="mb-6">
         <h1 className="text-xl font-bold text-[var(--sea-ink)]">History</h1>
       </div>
 
@@ -150,7 +131,7 @@ function HistoryPage() {
             return (
               <div key={dateStr}>
                 {/* Sticky date header */}
-                <div className="sticky top-[3.5rem] z-10 -mx-4 mb-2 flex items-center justify-between bg-[var(--header-bg)] px-4 py-2 backdrop-blur">
+                <div className="sticky top-0 z-10 -mx-4 mb-2 flex items-center justify-between bg-[var(--header-bg)] px-4 py-2 backdrop-blur">
                   <span className="text-sm font-bold text-[var(--sea-ink)]">
                     {formatDate(dateStr)}
                   </span>
@@ -214,27 +195,6 @@ function HistoryPage() {
         </div>
       )}
 
-      {/* FAB */}
-      <Link
-        to="/log"
-        className="fixed bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--lagoon-deep)] text-white shadow-xl transition hover:opacity-90 hover:shadow-2xl"
-        aria-label="Log meal"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="28"
-          height="28"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-      </Link>
     </div>
   )
 }

@@ -1,9 +1,8 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { getMealsByDateFn } from '#/lib/server/meals'
+import { getUserSettingsFn } from '#/lib/server/settings'
 import type { MealTag } from '#/lib/types'
-
-const DAILY_GOAL = 2000
 
 const MEAL_TAG_EMOJI: Record<MealTag, string> = {
   breakfast: '🌅',
@@ -59,6 +58,7 @@ type MealWithFoods = {
 function HomePage() {
   const navigate = useNavigate()
   const [meals, setMeals] = useState<MealWithFoods[]>([])
+  const [dailyGoal, setDailyGoal] = useState(2000)
   const [isLoading, setIsLoading] = useState(true)
   const [savedNotice, setSavedNotice] = useState(false)
   const search = Route.useSearch()
@@ -75,19 +75,22 @@ function HomePage() {
   useEffect(() => {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
     const today = new Date().toLocaleDateString('en-CA', { timeZone: tz }) // YYYY-MM-DD in local tz
+
     getMealsByDateFn({ data: { date: today, timezone: tz } })
-      .then((data) => {
-        setMeals(data as MealWithFoods[])
-      })
+      .then((data) => setMeals(data as MealWithFoods[]))
       .catch(console.error)
       .finally(() => setIsLoading(false))
+
+    getUserSettingsFn()
+      .then((settings) => setDailyGoal(settings.dailyCalorieGoal))
+      .catch(console.error)
   }, [])
 
   const totalCalories = meals.reduce((sum, m) => sum + m.totals.calories, 0)
   const totalProtein = meals.reduce((sum, m) => sum + m.totals.protein, 0)
   const totalCarbs = meals.reduce((sum, m) => sum + m.totals.carbs, 0)
   const totalFat = meals.reduce((sum, m) => sum + m.totals.fat, 0)
-  const progressPercent = Math.min((totalCalories / DAILY_GOAL) * 100, 100)
+  const progressPercent = Math.min((totalCalories / dailyGoal) * 100, 100)
 
   const tagGroups = meals.reduce(
     (acc, meal) => {
@@ -108,21 +111,15 @@ function HomePage() {
 
       {/* Today's Summary Card */}
       <div className="island-shell rise-in mb-6 rounded-2xl p-5">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3">
           <h2 className="text-base font-bold text-[var(--sea-ink)]">Today's Summary</h2>
-          <Link
-            to="/history"
-            className="text-xs font-medium text-[var(--lagoon-deep)] hover:underline"
-          >
-            View history →
-          </Link>
         </div>
 
         <div className="mb-4 flex items-end gap-2">
           <span className="text-4xl font-bold text-[var(--sea-ink)]">
             {Math.round(totalCalories)}
           </span>
-          <span className="mb-1 text-sm text-[var(--sea-ink-soft)]">/ {DAILY_GOAL} kcal</span>
+          <span className="mb-1 text-sm text-[var(--sea-ink-soft)]">/ {dailyGoal} kcal</span>
         </div>
 
         {/* Progress bar */}
@@ -237,27 +234,6 @@ function HomePage() {
         </div>
       )}
 
-      {/* Floating + button */}
-      <Link
-        to="/log"
-        className="fixed bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--lagoon-deep)] text-white shadow-xl transition hover:opacity-90 hover:shadow-2xl"
-        aria-label="Log meal"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="28"
-          height="28"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-      </Link>
     </div>
   )
 }

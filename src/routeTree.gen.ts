@@ -13,6 +13,7 @@ import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedLogRouteImport } from './routes/_authenticated/log'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
 import { Route as AuthenticatedHistoryIndexRouteImport } from './routes/_authenticated/history.index'
@@ -36,6 +37,11 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedLogRoute = AuthenticatedLogRouteImport.update({
@@ -72,6 +78,7 @@ export interface FileRoutesByFullPath {
   '/sign-up': typeof SignUpRoute
   '/history': typeof AuthenticatedHistoryRouteWithChildren
   '/log': typeof AuthenticatedLogRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/history/$mealId': typeof AuthenticatedHistoryMealIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/history/': typeof AuthenticatedHistoryIndexRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/log': typeof AuthenticatedLogRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/': typeof AuthenticatedIndexRoute
   '/history/$mealId': typeof AuthenticatedHistoryMealIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/sign-up': typeof SignUpRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRouteWithChildren
   '/_authenticated/log': typeof AuthenticatedLogRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/history/$mealId': typeof AuthenticatedHistoryMealIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/history'
     | '/log'
+    | '/settings'
     | '/history/$mealId'
     | '/api/auth/$'
     | '/history/'
@@ -113,6 +123,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/log'
+    | '/settings'
     | '/'
     | '/history/$mealId'
     | '/api/auth/$'
@@ -124,6 +135,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/_authenticated/history'
     | '/_authenticated/log'
+    | '/_authenticated/settings'
     | '/_authenticated/'
     | '/_authenticated/history/$mealId'
     | '/api/auth/$'
@@ -165,6 +177,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/log': {
@@ -221,12 +240,14 @@ const AuthenticatedHistoryRouteWithChildren =
 interface AuthenticatedRouteChildren {
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRouteWithChildren
   AuthenticatedLogRoute: typeof AuthenticatedLogRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedHistoryRoute: AuthenticatedHistoryRouteWithChildren,
   AuthenticatedLogRoute: AuthenticatedLogRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 
