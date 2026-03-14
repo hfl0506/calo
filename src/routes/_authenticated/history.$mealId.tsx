@@ -68,6 +68,7 @@ function MealDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showLightbox, setShowLightbox] = useState(false)
 
   useEffect(() => {
     getMealDetailFn({ data: { mealId } })
@@ -119,9 +120,26 @@ function MealDetailPage() {
           <button
             type="button"
             onClick={() => setShowDeleteConfirm(true)}
-            className="rounded-xl border border-red-200 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950"
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-500 text-white transition hover:bg-red-600"
+            aria-label="Delete meal"
           >
-            Delete
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M3 6h18" />
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              <line x1="10" y1="11" x2="10" y2="17" />
+              <line x1="14" y1="11" x2="14" y2="17" />
+            </svg>
           </button>
         )}
       </div>
@@ -151,9 +169,13 @@ function MealDetailPage() {
 
           {/* Image if available */}
           {meal.imageUrl && (
-            <div className="island-shell overflow-hidden rounded-2xl">
+            <button
+              type="button"
+              onClick={() => setShowLightbox(true)}
+              className="island-shell w-full overflow-hidden rounded-2xl"
+            >
               <img src={meal.imageUrl} alt="Meal" className="h-48 w-full object-cover" />
-            </div>
+            </button>
           )}
 
           {/* Nutrition totals */}
@@ -201,6 +223,42 @@ function MealDetailPage() {
           </div>
         </div>
       ) : null}
+
+      {/* Image lightbox */}
+      {showLightbox && meal?.imageUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          onClick={() => setShowLightbox(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setShowLightbox(false)}
+            className="absolute top-4 right-4 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white transition hover:bg-black/70"
+            aria-label="Close"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+          <img
+            src={meal.imageUrl}
+            alt="Meal"
+            className="max-h-[85vh] max-w-[90vw] rounded-lg object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
 
       {/* Delete confirmation modal */}
       {showDeleteConfirm && (
