@@ -153,7 +153,13 @@ function MealDetailPage() {
               onClick={() => setShowLightbox(true)}
               className="island-shell w-full overflow-hidden rounded-2xl"
             >
-              <img src={meal.imageUrl} alt="Meal" className="h-48 w-full object-cover" />
+              <img
+                src={meal.imageUrl}
+                alt={MEAL_TAG_LABEL[meal.tag]}
+                className="h-48 w-full object-cover"
+                loading="lazy"
+                decoding="async"
+              />
             </button>
           )}
 

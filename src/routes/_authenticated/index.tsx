@@ -1,4 +1,5 @@
-import { Await, createFileRoute, defer, Link, useNavigate, useRouter } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
+import { getRequest } from '@tanstack/react-start/server'
 import { useEffect, useMemo, useState } from 'react'
 import PullToRefresh from 'react-simple-pull-to-refresh'
 import { getMealsByDateFn } from '#/lib/server/meals'
@@ -11,12 +12,24 @@ import type { Meal, MealTag } from '#/lib/types'
 
 export const Route = createFileRoute('/_authenticated/')({
   loader: async () => {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: tz })
-    return {
-      meals: (await getMealsByDateFn({ data: { date: today, timezone: tz } })) as Meal[],
-      settings: defer(getUserSettingsFn()),
+    // On SSR (Railway/UTC), read the tz cookie set by the client's inline script.
+    // On client navigation, getRequest() returns null so we fall back to Intl.
+    let tz: string
+    try {
+      const req = getRequest()
+      const cookieHeader = req.headers.get('cookie') ?? ''
+      const tzCookie = cookieHeader.split(';').map((c) => c.trim()).find((c) => c.startsWith('tz='))
+      const decoded = tzCookie ? decodeURIComponent(tzCookie.slice(3)) : ''
+      tz = decoded || Intl.DateTimeFormat().resolvedOptions().timeZone
+    } catch {
+      tz = Intl.DateTimeFormat().resolvedOptions().timeZone
     }
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: tz })
+    const [meals, settings] = await Promise.all([
+      getMealsByDateFn({ data: { date: today, timezone: tz } }),
+      getUserSettingsFn(),
+    ])
+    return { meals: meals as Meal[], settings }
   },
   pendingComponent: HomeSkeleton,
   pendingMs: 0,
@@ -102,42 +115,32 @@ function HomePage() {
           <h2 className="text-base font-bold text-[var(--sea-ink)]">Today's Summary</h2>
         </div>
 
-        <Await
-          promise={settings}
-          fallback={
-            <div className="mb-4 flex items-end gap-2">
-              <span className="text-4xl font-bold text-[var(--sea-ink)]">{Math.round(totalCalories)}</span>
-              <span className="mb-1 text-sm text-[var(--sea-ink-soft)]">kcal</span>
-            </div>
-          }
-        >
-          {(s) => {
-            const isOverGoal = totalCalories > s.dailyCalorieGoal
-            const progressPercent = Math.min((totalCalories / s.dailyCalorieGoal) * 100, 100)
-            const overBy = Math.round(totalCalories - s.dailyCalorieGoal)
-            return (
-              <>
-                <div className="mb-1 flex items-end gap-2">
-                  <span className={`text-4xl font-bold ${isOverGoal ? 'text-orange-500 dark:text-orange-400' : 'text-[var(--sea-ink)]'}`}>
-                    {Math.round(totalCalories)}
-                  </span>
-                  <span className="mb-1 text-sm text-[var(--sea-ink-soft)]">/ {s.dailyCalorieGoal} kcal</span>
-                </div>
-                {isOverGoal && (
-                  <p role="alert" className="mb-2 text-xs font-medium text-orange-500 dark:text-orange-400">
-                    {overBy} kcal over your daily goal
-                  </p>
-                )}
-                <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-[var(--line)]">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${isOverGoal ? 'bg-orange-400' : 'bg-[var(--lagoon-deep)]'}`}
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-              </>
-            )
-          }}
-        </Await>
+        {(() => {
+          const isOverGoal = totalCalories > settings.dailyCalorieGoal
+          const progressPercent = Math.min((totalCalories / settings.dailyCalorieGoal) * 100, 100)
+          const overBy = Math.round(totalCalories - settings.dailyCalorieGoal)
+          return (
+            <>
+              <div className="mb-1 flex items-end gap-2">
+                <span className={`text-4xl font-bold ${isOverGoal ? 'text-orange-500 dark:text-orange-400' : 'text-[var(--sea-ink)]'}`}>
+                  {Math.round(totalCalories)}
+                </span>
+                <span className="mb-1 text-sm text-[var(--sea-ink-soft)]">/ {settings.dailyCalorieGoal} kcal</span>
+              </div>
+              {isOverGoal && (
+                <p role="alert" className="mb-2 text-xs font-medium text-orange-500 dark:text-orange-400">
+                  {overBy} kcal over your daily goal
+                </p>
+              )}
+              <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-[var(--line)]">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${isOverGoal ? 'bg-orange-400' : 'bg-[var(--lagoon-deep)]'}`}
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            </>
+          )
+        })()}
 
         {/* Macro totals */}
         <div className="mb-4 grid grid-cols-3 gap-3">
@@ -195,7 +198,7 @@ function HomePage() {
       ) : (
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-[var(--sea-ink-soft)]">Today's meals</h2>
-          {meals.map((meal) => (
+          {meals.map((meal, i) => (
             <Link
               key={meal.id}
               to="/history/$mealId"
@@ -209,6 +212,9 @@ function HomePage() {
                   src={meal.imageUrl}
                   alt={MEAL_TAG_LABEL[meal.tag]}
                   className="h-36 w-full object-cover"
+                  loading={i === 0 ? 'eager' : 'lazy'}
+                  decoding="async"
+                  fetchPriority={i === 0 ? 'high' : 'low'}
                 />
               )}
               <div className="flex items-center gap-3 p-4">

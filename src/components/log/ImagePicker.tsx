@@ -12,7 +12,7 @@ function compressImage(file: File): Promise<{ base64: string; mimeType: string }
       const img = new Image()
       img.onload = () => {
         const canvas = document.createElement('canvas')
-        const MAX_SIZE = 1024
+        const MAX_SIZE = 800
         let { width, height } = img
 
         if (width > height) {
@@ -36,7 +36,7 @@ function compressImage(file: File): Promise<{ base64: string; mimeType: string }
         }
         ctx.drawImage(img, 0, 0, width, height)
 
-        const dataUrl = canvas.toDataURL('image/webp', 0.9)
+        const dataUrl = canvas.toDataURL('image/webp', 0.75)
         const base64 = dataUrl.split(',')[1] ?? ''
         resolve({ base64, mimeType: 'image/webp' })
       }
