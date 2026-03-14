@@ -1,8 +1,11 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
 import { eq, and, gte, lt } from 'drizzle-orm'
-import OpenAI from 'openai'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3'
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+const geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 import { z } from 'zod'
 import { db } from '#/db'
 import { meals, mealFoods } from '#/db/schema'
@@ -75,16 +78,8 @@ const recalculateSchema = z.object({
 export const recalculateNutritionFn = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) => recalculateSchema.parse(data))
   .handler(async ({ data }) => {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
     try {
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        max_tokens: 500,
-        messages: [
-          {
-            role: 'system',
-            content: `You are a nutrition expert. Given:
+      const prompt = `You are a nutrition expert. Given:
 1. Original food name
 2. User's adjustment prompt (e.g., "coke zero", "half of it", "quarter of it", "double it", "less sugar", "extra large", "skip rice")
 
@@ -101,18 +96,14 @@ Return ONLY a valid JSON object with no markdown fences:
   "fiber": 0.0
 }
 
-All numeric values must be numbers (not strings).`,
-          },
-          {
-            role: 'user',
-            content: `Original food: "${data.originalName}"
-Portion: ${data.portionDescription ?? 'standard serving'}
-Adjustment: "${data.adjustmentPrompt}"`,
-          },
-        ],
-      })
+All numeric values must be numbers (not strings).
 
-      const content = response.choices[0]?.message?.content ?? '{}'
+Original food: "${data.originalName}"
+Portion: ${data.portionDescription ?? 'standard serving'}
+Adjustment: "${data.adjustmentPrompt}"`
+
+      const result = await geminiModel.generateContent(prompt)
+      const content = result.response.text()
       const cleaned = content.replace(/```[a-z]*\n?/gi, '').trim()
 
       const food = JSON.parse(cleaned) as AnalyzedFood
@@ -127,16 +118,8 @@ export const analyzePromptFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { prompt } = data
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
     try {
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        max_tokens: 1500,
-        messages: [
-          {
-            role: 'system',
-            content: `You are a nutrition expert assistant. Your ONLY job is to analyze food and meal descriptions and return nutritional information.
+      const fullPrompt = `You are a nutrition expert assistant. Your ONLY job is to analyze food and meal descriptions and return nutritional information.
 
 GUARDRAIL RULES — you MUST follow these strictly:
 1. If the user's message is NOT about food, meals, drinks, or ingredients, respond with exactly: {"error": "NOT_FOOD"}
@@ -161,16 +144,12 @@ or:
   }
 ]
 
-All numeric values must be numbers (not strings).`,
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-      })
+All numeric values must be numbers (not strings).
 
-      const content = response.choices[0]?.message?.content ?? '{"error": "NOT_FOOD"}'
+User message: ${prompt}`
+
+      const result = await geminiModel.generateContent(fullPrompt)
+      const content = result.response.text()
       const cleaned = content.replace(/```[a-z]*\n?/gi, '').trim()
 
       let parsed: unknown
@@ -207,19 +186,8 @@ export const analyzeImageFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const { imageBase64, mimeType } = data
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
     try {
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
-        max_tokens: 1500,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `You are a nutrition expert. Analyze this food image and return a JSON array of every distinct food item visible.
+      const promptText = `You are a nutrition expert. Analyze this food image and return a JSON array of every distinct food item visible.
 
 For each item provide your best estimate of the nutrition based on the visible portion size.
 
@@ -236,18 +204,11 @@ Return ONLY a valid JSON array with no markdown fences:
   }
 ]
 
-All numeric values must be numbers (not strings). If no food is visible return [].`,
-              },
-              {
-                type: 'image_url',
-                image_url: { url: `data:${mimeType};base64,${imageBase64}` },
-              },
-            ],
-          },
-        ],
-      })
+All numeric values must be numbers (not strings). If no food is visible return [].`
 
-      const content = response.choices[0]?.message?.content ?? '[]'
+      const imagePart = { inlineData: { data: imageBase64, mimeType } }
+      const result = await geminiModel.generateContent([promptText, imagePart])
+      const content = result.response.text()
       const cleaned = content.replace(/```[a-z]*\n?/gi, '').trim()
 
       let foods: AnalyzedFood[] = []
@@ -262,8 +223,10 @@ All numeric values must be numbers (not strings). If no food is visible return [
       }
 
       return { foods }
-    } catch {
-      return { foods: [] as AnalyzedFood[], error: 'Failed to analyze image' }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('[analyzeImageFn] Gemini error:', message)
+      return { foods: [] as AnalyzedFood[], error: `Failed to analyze image: ${message}` }
     }
   })
 
