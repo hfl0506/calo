@@ -1,5 +1,5 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Await, createFileRoute, defer, Link, useNavigate, useRouter } from '@tanstack/react-router'
+import { useEffect, useMemo, useState } from 'react'
 import PullToRefresh from 'react-simple-pull-to-refresh'
 import { getMealsByDateFn } from '#/lib/server/meals'
 import { getUserSettingsFn } from '#/lib/server/settings'
@@ -10,18 +10,26 @@ import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
 import type { Meal, MealTag } from '#/lib/types'
 
 export const Route = createFileRoute('/_authenticated/')({
+  loader: async () => {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: tz })
+    return {
+      meals: (await getMealsByDateFn({ data: { date: today, timezone: tz } })) as Meal[],
+      settings: defer(getUserSettingsFn()),
+    }
+  },
+  pendingComponent: HomeSkeleton,
+  pendingMs: 0,
   component: HomePage,
 })
 
 function HomePage() {
   const navigate = useNavigate()
-  const [meals, setMeals] = useState<Meal[]>([])
-  const [dailyGoal, setDailyGoal] = useState(2000)
-  const [isLoading, setIsLoading] = useState(true)
+  const router = useRouter()
+  const { meals, settings } = Route.useLoaderData()
   const [savedNotice, setSavedNotice] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState(false)
-  const [refreshKey, setRefreshKey] = useState(0)
   const search = Route.useSearch()
 
   useEffect(() => {
@@ -31,7 +39,7 @@ function HomePage() {
       setIsSaving(false)
       setTimeout(() => setSavedNotice(false), 3000)
       void navigate({ to: '/', replace: true })
-      setRefreshKey((k) => k + 1)
+      void router.invalidate()
     }
     if (s.saving) {
       setIsSaving(true)
@@ -42,22 +50,11 @@ function HomePage() {
       setSaveError(true)
       void navigate({ to: '/', replace: true })
     }
-  }, [search, navigate])
+  }, [search, navigate, router])
 
-  const fetchData = useCallback(async () => {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: tz })
-    const [mealsData, settings] = await Promise.all([
-      getMealsByDateFn({ data: { date: today, timezone: tz } }),
-      getUserSettingsFn(),
-    ])
-    setMeals(mealsData as Meal[])
-    setDailyGoal(settings.dailyCalorieGoal)
-  }, [])
-
-  useEffect(() => {
-    fetchData().catch(console.error).finally(() => setIsLoading(false))
-  }, [fetchData, refreshKey])
+  const handleRefresh = async () => {
+    await router.invalidate()
+  }
 
   const { totalCalories, totalProtein, totalCarbs, totalFat, tagGroups } = useMemo(() => {
     let totalCalories = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0
@@ -72,12 +69,8 @@ function HomePage() {
     return { totalCalories, totalProtein, totalCarbs, totalFat, tagGroups }
   }, [meals])
 
-  const progressPercent = Math.min((totalCalories / dailyGoal) * 100, 100)
-
-  if (isLoading) return <HomeSkeleton />
-
   return (
-    <PullToRefresh onRefresh={fetchData} pullingContent="" refreshingContent={
+    <PullToRefresh onRefresh={handleRefresh} pullingContent="" refreshingContent={
       <div className="flex justify-center py-3">
         <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent" />
       </div>
@@ -109,20 +102,35 @@ function HomePage() {
           <h2 className="text-base font-bold text-[var(--sea-ink)]">Today's Summary</h2>
         </div>
 
-        <div className="mb-4 flex items-end gap-2">
-          <span className="text-4xl font-bold text-[var(--sea-ink)]">
-            {Math.round(totalCalories)}
-          </span>
-          <span className="mb-1 text-sm text-[var(--sea-ink-soft)]">/ {dailyGoal} kcal</span>
-        </div>
-
-        {/* Progress bar */}
-        <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-[var(--line)]">
-          <div
-            className="h-full rounded-full bg-[var(--lagoon-deep)] transition-all duration-500"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
+        <Await
+          promise={settings}
+          fallback={
+            <div className="mb-4 flex items-end gap-2">
+              <span className="text-4xl font-bold text-[var(--sea-ink)]">{Math.round(totalCalories)}</span>
+              <span className="mb-1 text-sm text-[var(--sea-ink-soft)]">kcal</span>
+            </div>
+          }
+        >
+          {(s) => {
+            const progressPercent = Math.min((totalCalories / s.dailyCalorieGoal) * 100, 100)
+            return (
+              <>
+                <div className="mb-4 flex items-end gap-2">
+                  <span className="text-4xl font-bold text-[var(--sea-ink)]">
+                    {Math.round(totalCalories)}
+                  </span>
+                  <span className="mb-1 text-sm text-[var(--sea-ink-soft)]">/ {s.dailyCalorieGoal} kcal</span>
+                </div>
+                <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-[var(--line)]">
+                  <div
+                    className="h-full rounded-full bg-[var(--lagoon-deep)] transition-all duration-500"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              </>
+            )
+          }}
+        </Await>
 
         {/* Macro totals */}
         <div className="mb-4 grid grid-cols-3 gap-3">
