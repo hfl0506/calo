@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { deleteMealFn, getMealDetailFn } from '#/lib/server/meals'
 import { getCachedMealDetail } from '#/lib/meal-prefetch-cache'
+import { MealDetailSkeleton } from '#/components/SkeletonCard'
 import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
 import type { MealTag } from '#/lib/types'
 
@@ -135,9 +136,7 @@ function MealDetailPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent" />
-        </div>
+        <MealDetailSkeleton />
       ) : error ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900 dark:bg-red-950 dark:text-red-400">
           {error}

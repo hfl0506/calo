@@ -79,6 +79,62 @@ export function HomeSkeleton() {
   )
 }
 
+export function MealDetailSkeleton() {
+  return (
+    <Themed>
+      <div className="space-y-4">
+
+        {/* Meal header card: [emoji circle]  [tag name / datetime] */}
+        <div className="island-shell rounded-2xl p-5">
+          <div className="flex items-center gap-3">
+            <Skeleton circle width={44} height={44} />
+            <div className="space-y-2">
+              <Skeleton width={72} height={16} borderRadius={6} />
+              <Skeleton width={120} height={12} borderRadius={6} />
+            </div>
+          </div>
+        </div>
+
+        {/* Meal image — h-48 */}
+        <Skeleton height={192} borderRadius={16} />
+
+        {/* Nutrition totals card */}
+        <div className="island-shell rounded-2xl p-4 space-y-3">
+          <Skeleton width={112} height={13} borderRadius={6} />
+          <div className="grid grid-cols-4 gap-3">
+            <Skeleton height={68} borderRadius={12} />
+            <Skeleton height={68} borderRadius={12} />
+            <Skeleton height={68} borderRadius={12} />
+            <Skeleton height={68} borderRadius={12} />
+          </div>
+        </div>
+
+        {/* Foods section */}
+        <div className="space-y-2">
+          <Skeleton width={64} height={13} borderRadius={6} />
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="island-shell rounded-2xl p-4">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <Skeleton width={120} height={13} borderRadius={6} />
+                  <Skeleton width={88} height={11} borderRadius={6} />
+                  <div className="flex gap-3 mt-1">
+                    <Skeleton width={36} height={11} borderRadius={6} />
+                    <Skeleton width={36} height={11} borderRadius={6} />
+                    <Skeleton width={36} height={11} borderRadius={6} />
+                  </div>
+                </div>
+                <Skeleton width={52} height={13} borderRadius={6} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+      </div>
+    </Themed>
+  )
+}
+
 export function HistorySkeleton() {
   return (
     <Themed>
