@@ -32,7 +32,8 @@ function SignUpPage() {
     handleSubmit,
     formState: { errors, isSubmitting },
     setError,
-  } = useForm<FormData>({ resolver: zodResolver(schema) })
+  // TODO: remove cast when @hookform/resolvers supports zod v4.3+
+  } = useForm<FormData>({ resolver: zodResolver(schema as any) })
 
   const onSubmit = async (data: FormData) => {
     const { error } = await authClient.signUp.email({

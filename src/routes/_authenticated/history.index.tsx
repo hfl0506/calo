@@ -263,9 +263,19 @@ function HistoryPage() {
           {hasMore && (
             <div ref={sentinelRef} className="flex justify-center py-4">
               {isLoadingMore && (
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent" />
+                <div
+                  role="status"
+                  aria-label="Loading more meals"
+                  className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent"
+                />
               )}
             </div>
+          )}
+
+          {!hasMore && (
+            <p className="py-6 text-center text-sm text-[var(--sea-ink-soft)]">
+              You've reached the beginning of your history
+            </p>
           )}
         </div>
       )}

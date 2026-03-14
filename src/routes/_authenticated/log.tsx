@@ -205,7 +205,7 @@ function LogMealPage() {
       {/* Content */}
       <div className="flex-1 px-4 py-4">
         {error && step !== 'analyzing' && (
-          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900 dark:bg-red-950">
+          <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900 dark:bg-red-950">
             <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
             {retryData && (
               <button

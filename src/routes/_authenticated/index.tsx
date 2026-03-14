@@ -72,25 +72,25 @@ function HomePage() {
   return (
     <PullToRefresh onRefresh={handleRefresh} pullingContent="" refreshingContent={
       <div className="flex justify-center py-3">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent" />
+        <div role="status" aria-label="Refreshing" className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent" />
       </div>
     }>
     <div className="px-4 py-6 pb-24">
       {isSaving && (
-        <div className="rise-in mb-4 flex items-center gap-3 rounded-xl border border-[var(--lagoon-deep)] bg-[rgba(79,184,178,0.08)] px-4 py-3">
-          <div className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent" />
+        <div role="status" className="rise-in mb-4 flex items-center gap-3 rounded-xl border border-[var(--lagoon-deep)] bg-[rgba(79,184,178,0.08)] px-4 py-3">
+          <div aria-hidden="true" className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent" />
           <p className="text-sm font-medium text-[var(--lagoon-deep)]">Saving your meal…</p>
         </div>
       )}
 
       {savedNotice && (
-        <div className="rise-in mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700 dark:border-green-900 dark:bg-green-950 dark:text-green-300">
+        <div role="status" aria-live="polite" className="rise-in mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700 dark:border-green-900 dark:bg-green-950 dark:text-green-300">
           Meal saved successfully!
         </div>
       )}
 
       {saveError && (
-        <div className="rise-in mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600 dark:border-red-900 dark:bg-red-950 dark:text-red-400">
+        <div role="alert" className="rise-in mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600 dark:border-red-900 dark:bg-red-950 dark:text-red-400">
           Failed to save meal. Please try again.
           <button type="button" onClick={() => setSaveError(false)} className="ml-2 underline">Dismiss</button>
         </div>
@@ -112,18 +112,25 @@ function HomePage() {
           }
         >
           {(s) => {
+            const isOverGoal = totalCalories > s.dailyCalorieGoal
             const progressPercent = Math.min((totalCalories / s.dailyCalorieGoal) * 100, 100)
+            const overBy = Math.round(totalCalories - s.dailyCalorieGoal)
             return (
               <>
-                <div className="mb-4 flex items-end gap-2">
-                  <span className="text-4xl font-bold text-[var(--sea-ink)]">
+                <div className="mb-1 flex items-end gap-2">
+                  <span className={`text-4xl font-bold ${isOverGoal ? 'text-orange-500 dark:text-orange-400' : 'text-[var(--sea-ink)]'}`}>
                     {Math.round(totalCalories)}
                   </span>
                   <span className="mb-1 text-sm text-[var(--sea-ink-soft)]">/ {s.dailyCalorieGoal} kcal</span>
                 </div>
+                {isOverGoal && (
+                  <p role="alert" className="mb-2 text-xs font-medium text-orange-500 dark:text-orange-400">
+                    {overBy} kcal over your daily goal
+                  </p>
+                )}
                 <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-[var(--line)]">
                   <div
-                    className="h-full rounded-full bg-[var(--lagoon-deep)] transition-all duration-500"
+                    className={`h-full rounded-full transition-all duration-500 ${isOverGoal ? 'bg-orange-400' : 'bg-[var(--lagoon-deep)]'}`}
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
