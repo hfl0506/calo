@@ -275,7 +275,7 @@ function LogMealPage() {
 
       {/* Save button fixed to bottom (only on review step) */}
       {step === 'review' && (
-        <div className="fixed bottom-14 left-0 right-0 z-40 border-t border-[var(--line)] bg-[var(--header-bg)] p-4 backdrop-blur-lg">
+        <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-[var(--line)] bg-[var(--header-bg)] p-4 backdrop-blur-lg">
           <button
             type="button"
             disabled={foods.length === 0}

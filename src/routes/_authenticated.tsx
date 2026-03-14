@@ -29,14 +29,14 @@ function AuthenticatedLayout() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <main className="flex-1 pb-20">
+      <main className="flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))]">
         <Outlet />
       </main>
 
       {/* Floating add button */}
       <Link
         to="/log"
-        className="fixed bottom-20 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--lagoon-deep)] text-white shadow-xl transition hover:opacity-90 hover:shadow-2xl"
+        className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--lagoon-deep)] text-white shadow-xl transition hover:opacity-90 hover:shadow-2xl"
         aria-label="Log meal"
       >
         <svg
