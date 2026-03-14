@@ -5,7 +5,7 @@ import FoodReviewList from '#/components/log/FoodReviewList'
 import ImagePicker from '#/components/log/ImagePicker'
 import MealTagPicker from '#/components/log/MealTagPicker'
 import NutritionSummaryBar from '#/components/log/NutritionSummaryBar'
-import { analyzeImageFn, analyzePromptFn, saveMealFn } from '#/lib/server/meals'
+import { analyzeImageFn, analyzePromptFn, recalculateNutritionFn, saveMealFn } from '#/lib/server/meals'
 import { getMealUploadUrlFn } from '#/lib/server/upload'
 import type { AnalyzedFood } from '#/lib/types'
 
@@ -24,6 +24,8 @@ function LogMealPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [retryData, setRetryData] = useState<{ base64: string; mimeType: string } | null>(null)
   const [imageData, setImageData] = useState<{ base64: string; mimeType: string } | null>(null)
+  const [adjustmentPrompt, setAdjustmentPrompt] = useState('')
+  const [isAdjusting, setIsAdjusting] = useState(false)
 
   const handleImage = async (base64: string, mimeType: string) => {
     setRetryData({ base64, mimeType })
@@ -76,6 +78,37 @@ function LogMealPage() {
   const handleRetry = () => {
     if (retryData) {
       void handleImage(retryData.base64, retryData.mimeType)
+    }
+  }
+
+  const handleAdjustment = async () => {
+    if (!adjustmentPrompt.trim() || foods.length === 0) return
+    setIsAdjusting(true)
+    try {
+      const updatedFoods = await Promise.all(
+        foods.map(async (food) => {
+          const result = await recalculateNutritionFn({
+            data: {
+              originalName: food.name,
+              adjustmentPrompt: adjustmentPrompt.trim(),
+              portionDescription: food.portionDescription,
+            },
+          })
+          if (result.food) {
+            return {
+              ...result.food,
+              portionDescription: result.food.portionDescription ?? food.portionDescription,
+            }
+          }
+          return food
+        }),
+      )
+      setFoods(updatedFoods)
+      setAdjustmentPrompt('')
+    } catch (err) {
+      console.error('Failed to adjust:', err)
+    } finally {
+      setIsAdjusting(false)
     }
   }
 
@@ -194,6 +227,28 @@ function LogMealPage() {
             <div className="space-y-1">
               <h2 className="px-1 text-sm font-semibold text-[var(--sea-ink)]">Meal type</h2>
               <MealTagPicker value={tag} onChange={setTag} />
+            </div>
+
+            {/* Central adjustment prompt */}
+            <div className="space-y-2">
+              <h2 className="px-1 text-sm font-semibold text-[var(--sea-ink)]">Adjustments</h2>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={adjustmentPrompt}
+                  onChange={(e) => setAdjustmentPrompt(e.target.value)}
+                  placeholder="e.g. coke zero, half of it, skip rice"
+                  className="flex-1 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] px-3 py-2 text-sm text-[var(--sea-ink)] outline-none transition focus:border-[var(--lagoon-deep)] placeholder:text-[var(--sea-ink-soft)]"
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleAdjustment()}
+                  disabled={isAdjusting || !adjustmentPrompt.trim()}
+                  className="rounded-xl bg-[var(--lagoon-deep)] px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-40"
+                >
+                  {isAdjusting ? '↻' : 'Apply'}
+                </button>
+              </div>
             </div>
 
             <div className="space-y-1">

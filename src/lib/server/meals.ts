@@ -66,6 +66,62 @@ const analyzePromptSchema = z.object({
   prompt: z.string().min(1).max(500),
 })
 
+const recalculateSchema = z.object({
+  originalName: z.string(),
+  adjustmentPrompt: z.string().min(1).max(200),
+  portionDescription: z.string().optional(),
+})
+
+export const recalculateNutritionFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: unknown) => recalculateSchema.parse(data))
+  .handler(async ({ data }) => {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+    try {
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        max_tokens: 500,
+        messages: [
+          {
+            role: 'system',
+            content: `You are a nutrition expert. Given:
+1. Original food name
+2. User's adjustment prompt (e.g., "coke zero", "half of it", "quarter of it", "double it", "less sugar", "extra large", "skip rice")
+
+Return the adjusted nutritional information.
+
+Return ONLY a valid JSON object with no markdown fences:
+{
+  "name": "adjusted food name",
+  "portionDescription": "adjusted portion",
+  "calories": 0,
+  "protein": 0.0,
+  "carbs": 0.0,
+  "fat": 0.0,
+  "fiber": 0.0
+}
+
+All numeric values must be numbers (not strings).`,
+          },
+          {
+            role: 'user',
+            content: `Original food: "${data.originalName}"
+Portion: ${data.portionDescription ?? 'standard serving'}
+Adjustment: "${data.adjustmentPrompt}"`,
+          },
+        ],
+      })
+
+      const content = response.choices[0]?.message?.content ?? '{}'
+      const cleaned = content.replace(/```[a-z]*\n?/gi, '').trim()
+
+      const food = JSON.parse(cleaned) as AnalyzedFood
+      return { food }
+    } catch {
+      return { error: 'Failed to recalculate nutrition' }
+    }
+  })
+
 export const analyzePromptFn = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) => analyzePromptSchema.parse(data))
   .handler(async ({ data }) => {

@@ -52,13 +52,15 @@ export default function FoodReviewItem({ food, onChange, onDelete }: FoodReviewI
           </div>
 
           {/* Expand/collapse macro edit */}
-          <button
-            type="button"
-            onClick={() => setExpanded(!expanded)}
-            className="text-xs text-[var(--lagoon-deep)] transition hover:opacity-80"
-          >
-            {expanded ? '▲ Hide details' : '▼ Edit macros'}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setExpanded(!expanded)}
+              className="text-xs text-[var(--lagoon-deep)] transition hover:opacity-80"
+            >
+              {expanded ? '▲ Hide details' : '▼ Edit macros'}
+            </button>
+          </div>
 
           {expanded && (
             <div className="mt-2 grid grid-cols-2 gap-2">
