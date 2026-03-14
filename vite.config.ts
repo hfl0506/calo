@@ -37,14 +37,14 @@ const config = defineConfig({
             },
           },
           {
-            // NetworkFirst for API calls — always try fresh, fall back to cache
+            // StaleWhileRevalidate for API — serve cached instantly, refresh in background
+            // This enables offline viewing of previously loaded data
             urlPattern: ({ url }) => url.pathname.startsWith('/_server/'),
-            handler: 'NetworkFirst',
+            handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'api-cache',
-              networkTimeoutSeconds: 5,
               expiration: { maxEntries: 50, maxAgeSeconds: 60 * 5 },
-              cacheableResponse: { statuses: [0, 200] },
+              cacheableResponse: { statuses: [200] },
             },
           },
         ],

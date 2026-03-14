@@ -270,21 +270,23 @@ All numeric values must be numbers (not strings). If no food is visible return [
     }
   })
 
+const finiteNonNegative = z.number().finite().nonnegative()
+
 const saveMealSchema = z.object({
   tag: z.enum(['breakfast', 'lunch', 'dinner', 'snacks']),
   foods: z.array(
     z.object({
-      name: z.string(),
-      portionDescription: z.string().optional(),
-      calories: z.number(),
-      protein: z.number().optional(),
-      carbs: z.number().optional(),
-      fat: z.number().optional(),
-      fiber: z.number().optional(),
+      name: z.string().min(1).max(200),
+      portionDescription: z.string().max(200).optional(),
+      calories: finiteNonNegative,
+      protein: finiteNonNegative.optional(),
+      carbs: finiteNonNegative.optional(),
+      fat: finiteNonNegative.optional(),
+      fiber: finiteNonNegative.optional(),
     }),
-  ),
+  ).min(1).max(50),
   loggedAt: z.string().optional(),
-  imageUrl: z.string().optional(),
+  imageUrl: z.string().url().optional(),
 })
 
 export const saveMealFn = createServerFn({ method: 'POST' })
@@ -390,6 +392,7 @@ export const getMealsRangeFn = createServerFn({ method: 'GET' })
       ),
       with: { mealFoods: true },
       orderBy: (meals, { desc }) => [desc(meals.loggedAt)],
+      limit: 200,
     })
 
     return mealRows.map(({ mealFoods, ...meal }) => ({

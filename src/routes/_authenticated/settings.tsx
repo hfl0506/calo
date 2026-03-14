@@ -15,6 +15,7 @@ function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState(false)
 
   useEffect(() => {
     getUserSettingsFn()
@@ -29,13 +30,14 @@ function SettingsPage() {
   const handleSaveGoal = async () => {
     if (dailyGoal < 500 || dailyGoal > 10000 || dailyGoal === savedGoal) return
     setIsSaving(true)
+    setSaveError(false)
     try {
       await updateUserSettingsFn({ data: { dailyCalorieGoal: dailyGoal } })
       setSavedGoal(dailyGoal)
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch {
-      // ignore
+      setSaveError(true)
     } finally {
       setIsSaving(false)
     }
@@ -60,26 +62,33 @@ function SettingsPage() {
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent" />
             </div>
           ) : (
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                min={500}
-                max={10000}
-                step={50}
-                value={dailyGoal}
-                onChange={(e) => setDailyGoal(Number(e.target.value))}
-                className="w-28 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] px-3 py-2 text-center text-base font-semibold text-[var(--sea-ink)] outline-none focus:border-[var(--lagoon-deep)]"
-              />
-              <span className="text-sm text-[var(--sea-ink-soft)]">kcal</span>
-              <button
-                type="button"
-                disabled={isSaving || dailyGoal === savedGoal || dailyGoal < 500 || dailyGoal > 10000}
-                onClick={() => void handleSaveGoal()}
-                className="ml-auto rounded-xl bg-[var(--lagoon-deep)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
-              >
-                {isSaving ? 'Saving...' : saved ? 'Saved!' : 'Save'}
-              </button>
-            </div>
+            <>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min={500}
+                  max={10000}
+                  step={50}
+                  value={dailyGoal}
+                  onChange={(e) => setDailyGoal(Number(e.target.value))}
+                  className="w-28 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] px-3 py-2 text-center text-base font-semibold text-[var(--sea-ink)] outline-none focus:border-[var(--lagoon-deep)]"
+                />
+                <span className="text-sm text-[var(--sea-ink-soft)]">kcal</span>
+                <button
+                  type="button"
+                  disabled={isSaving || dailyGoal === savedGoal || dailyGoal < 500 || dailyGoal > 10000}
+                  onClick={() => void handleSaveGoal()}
+                  className="ml-auto rounded-xl bg-[var(--lagoon-deep)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
+                >
+                  {isSaving ? 'Saving...' : saved ? 'Saved!' : 'Save'}
+                </button>
+              </div>
+              {saveError && (
+                <p role="alert" className="mt-2 text-xs text-red-500">
+                  Failed to save. Please try again.
+                </p>
+              )}
+            </>
           )}
         </div>
 

@@ -4,6 +4,7 @@ import { deleteMealFn, getMealDetailFn } from '#/lib/server/meals'
 import { getCachedMealDetail } from '#/lib/meal-prefetch-cache'
 import { MealDetailSkeleton } from '#/components/SkeletonCard'
 import { formatDateTime } from '#/lib/format'
+import { parseNutritionValue } from '#/lib/nutrition'
 import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
 import type { MealTag } from '#/lib/types'
 
@@ -189,18 +190,18 @@ function MealDetailPage() {
                     )}
                     <div className="mt-2 flex gap-3">
                       <span className="text-xs text-[var(--sea-ink-soft)]">
-                        P: {Math.round(parseFloat(food.protein ?? '0') * 10) / 10}g
+                        P: {Math.round(parseNutritionValue(food.protein) * 10) / 10}g
                       </span>
                       <span className="text-xs text-[var(--sea-ink-soft)]">
-                        C: {Math.round(parseFloat(food.carbs ?? '0') * 10) / 10}g
+                        C: {Math.round(parseNutritionValue(food.carbs) * 10) / 10}g
                       </span>
                       <span className="text-xs text-[var(--sea-ink-soft)]">
-                        F: {Math.round(parseFloat(food.fat ?? '0') * 10) / 10}g
+                        F: {Math.round(parseNutritionValue(food.fat) * 10) / 10}g
                       </span>
                     </div>
                   </div>
                   <span className="text-sm font-bold text-[var(--sea-ink)]">
-                    {Math.round(parseFloat(food.calories))} kcal
+                    {Math.round(parseNutritionValue(food.calories))} kcal
                   </span>
                 </div>
               </div>
