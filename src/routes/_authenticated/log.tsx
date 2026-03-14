@@ -252,7 +252,7 @@ function LogMealPage() {
                   onChange={(e) => setAdjustmentPrompt(e.target.value)}
                   disabled={isAdjusting}
                   placeholder="e.g. coke zero, half of it, skip rice"
-                  className="flex-1 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] px-3 py-2 text-sm text-[var(--sea-ink)] outline-none transition focus:border-[var(--lagoon-deep)] placeholder:text-[var(--sea-ink-soft)] disabled:opacity-50"
+                  className="flex-1 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] px-3 py-2 text-base text-[var(--sea-ink)] outline-none transition focus:border-[var(--lagoon-deep)] placeholder:text-[var(--sea-ink-soft)] disabled:opacity-50"
                 />
                 <button
                   type="button"

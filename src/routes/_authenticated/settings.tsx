@@ -68,7 +68,7 @@ function SettingsPage() {
                 step={50}
                 value={dailyGoal}
                 onChange={(e) => setDailyGoal(Number(e.target.value))}
-                className="w-28 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] px-3 py-2 text-center text-sm font-semibold text-[var(--sea-ink)] outline-none focus:border-[var(--lagoon-deep)]"
+                className="w-28 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] px-3 py-2 text-center text-base font-semibold text-[var(--sea-ink)] outline-none focus:border-[var(--lagoon-deep)]"
               />
               <span className="text-sm text-[var(--sea-ink-soft)]">kcal</span>
               <button
