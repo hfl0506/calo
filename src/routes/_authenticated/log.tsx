@@ -24,11 +24,11 @@ function LogMealPage() {
   const [foods, setFoods] = useState<AnalyzedFood[]>([])
   const [tag, setTag] = useState<string>('lunch')
   const [error, setError] = useState<string | null>(null)
-  const [isSaving, setIsSaving] = useState(false)
   const [retryData, setRetryData] = useState<{ base64: string; mimeType: string } | null>(null)
   const [imageData, setImageData] = useState<{ base64: string; mimeType: string } | null>(null)
   const [adjustmentPrompt, setAdjustmentPrompt] = useState('')
   const [isAdjusting, setIsAdjusting] = useState(false)
+
 
   const handleImage = async (base64: string, mimeType: string) => {
     setRetryData({ base64, mimeType })
@@ -142,7 +142,10 @@ function LogMealPage() {
 
   const handleSave = async () => {
     if (foods.length === 0) return
-    setIsSaving(true)
+
+    // Navigate home immediately — save happens in the background
+    await navigate({ to: '/', search: { saving: true } })
+
     try {
       let imageUrl: string | undefined
       if (imageData) {
@@ -157,10 +160,10 @@ function LogMealPage() {
           imageUrl,
         },
       })
-      await navigate({ to: '/', search: { saved: true } })
+
+      await navigate({ to: '/', search: { saved: true }, replace: true })
     } catch {
-      setError('Failed to save meal. Please try again.')
-      setIsSaving(false)
+      await navigate({ to: '/', search: { saveError: true }, replace: true })
     }
   }
 
@@ -269,11 +272,11 @@ function LogMealPage() {
         <div className="fixed bottom-14 left-0 right-0 z-40 border-t border-[var(--line)] bg-[var(--header-bg)] p-4 backdrop-blur-lg">
           <button
             type="button"
-            disabled={isSaving || foods.length === 0}
+            disabled={foods.length === 0}
             onClick={() => void handleSave()}
             className="w-full rounded-xl bg-[var(--lagoon-deep)] px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
           >
-            {isSaving ? 'Saving…' : `Save Meal (${Math.round(foods.reduce((s, f) => s + f.calories, 0))} kcal)`}
+            {`Save Meal (${Math.round(foods.reduce((s, f) => s + f.calories, 0))} kcal)`}
           </button>
         </div>
       )}

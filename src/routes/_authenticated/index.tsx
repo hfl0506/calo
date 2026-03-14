@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { getMealsByDateFn } from '#/lib/server/meals'
 import { getUserSettingsFn } from '#/lib/server/settings'
+import { prefetchMealDetail } from '#/lib/meal-prefetch-cache'
 import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
 import type { Meal, MealTag } from '#/lib/types'
 
@@ -20,13 +21,27 @@ function HomePage() {
   const [dailyGoal, setDailyGoal] = useState(2000)
   const [isLoading, setIsLoading] = useState(true)
   const [savedNotice, setSavedNotice] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
   const search = Route.useSearch()
 
   useEffect(() => {
-    // Check for ?saved=true query param
-    if ((search as Record<string, unknown>).saved) {
+    const s = search as Record<string, unknown>
+    if (s.saved) {
       setSavedNotice(true)
+      setIsSaving(false)
       setTimeout(() => setSavedNotice(false), 3000)
+      void navigate({ to: '/', replace: true })
+      setRefreshKey((k) => k + 1)
+    }
+    if (s.saving) {
+      setIsSaving(true)
+      setSaveError(false)
+    }
+    if (s.saveError) {
+      setIsSaving(false)
+      setSaveError(true)
       void navigate({ to: '/', replace: true })
     }
   }, [search, navigate])
@@ -45,7 +60,7 @@ function HomePage() {
       })
       .catch(console.error)
       .finally(() => setIsLoading(false))
-  }, [])
+  }, [refreshKey])
 
   const totalCalories = meals.reduce((sum, m) => sum + m.totals.calories, 0)
   const totalProtein = meals.reduce((sum, m) => sum + m.totals.protein, 0)
@@ -64,9 +79,23 @@ function HomePage() {
 
   return (
     <div className="px-4 py-6 pb-24">
+      {isSaving && (
+        <div className="rise-in mb-4 flex items-center gap-3 rounded-xl border border-[var(--lagoon-deep)] bg-[rgba(79,184,178,0.08)] px-4 py-3">
+          <div className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent" />
+          <p className="text-sm font-medium text-[var(--lagoon-deep)]">Saving your meal…</p>
+        </div>
+      )}
+
       {savedNotice && (
         <div className="rise-in mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700 dark:border-green-900 dark:bg-green-950 dark:text-green-300">
           Meal saved successfully!
+        </div>
+      )}
+
+      {saveError && (
+        <div className="rise-in mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600 dark:border-red-900 dark:bg-red-950 dark:text-red-400">
+          Failed to save meal. Please try again.
+          <button type="button" onClick={() => setSaveError(false)} className="ml-2 underline">Dismiss</button>
         </div>
       )}
 
@@ -157,6 +186,8 @@ function HomePage() {
               to="/history/$mealId"
               params={{ mealId: meal.id }}
               className="island-shell block overflow-hidden rounded-2xl transition hover:shadow-lg"
+              onMouseEnter={() => prefetchMealDetail(meal.id)}
+              onTouchStart={() => prefetchMealDetail(meal.id)}
             >
               {meal.imageUrl && (
                 <img

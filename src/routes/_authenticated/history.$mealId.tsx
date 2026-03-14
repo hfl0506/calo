@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { deleteMealFn, getMealDetailFn } from '#/lib/server/meals'
+import { getCachedMealDetail } from '#/lib/meal-prefetch-cache'
 import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
 import type { MealTag } from '#/lib/types'
 
@@ -50,8 +51,9 @@ function formatDateTime(date: Date | null): string {
 function MealDetailPage() {
   const { mealId } = Route.useParams()
   const navigate = useNavigate()
-  const [meal, setMeal] = useState<MealDetail | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const cached = getCachedMealDetail(mealId) as MealDetail | null
+  const [meal, setMeal] = useState<MealDetail | null>(cached)
+  const [isLoading, setIsLoading] = useState(!cached)
   const [error, setError] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -60,7 +62,7 @@ function MealDetailPage() {
   useEffect(() => {
     getMealDetailFn({ data: { mealId } })
       .then((data) => setMeal(data as MealDetail))
-      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load meal'))
+      .catch((err) => { if (!cached) setError(err instanceof Error ? err.message : 'Failed to load meal') })
       .finally(() => setIsLoading(false))
   }, [mealId])
 

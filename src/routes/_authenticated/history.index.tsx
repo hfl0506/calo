@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
 import { getMealsRangeFn } from '#/lib/server/meals'
+import { prefetchMealDetail } from '#/lib/meal-prefetch-cache'
 import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
 import type { Meal } from '#/lib/types'
 
@@ -216,6 +217,8 @@ function HistoryPage() {
                       to="/history/$mealId"
                       params={{ mealId: meal.id }}
                       className="island-shell flex items-center gap-3 rounded-2xl p-4 transition hover:shadow-lg"
+                      onMouseEnter={() => prefetchMealDetail(meal.id)}
+                      onTouchStart={() => prefetchMealDetail(meal.id)}
                     >
                       <span className="text-2xl">{MEAL_TAG_EMOJI[meal.tag]}</span>
                       <div className="flex-1">
