@@ -16,7 +16,25 @@ export const Route = createRootRoute({
     links: [{ rel: 'stylesheet', href: appCss }],
   }),
   shellComponent: RootDocument,
+  errorComponent: RootErrorBoundary,
 })
+
+function RootErrorBoundary({ error }: { error: Error }) {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
+      <span className="text-5xl">⚠️</span>
+      <h1 className="text-xl font-bold text-[var(--sea-ink)]">Something went wrong</h1>
+      <p className="max-w-sm text-sm text-[var(--sea-ink-soft)]">{error.message}</p>
+      <button
+        type="button"
+        onClick={() => window.location.reload()}
+        className="rounded-xl bg-[var(--lagoon-deep)] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+      >
+        Reload
+      </button>
+    </div>
+  )
+}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (

@@ -1,15 +1,8 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getRequest } from '@tanstack/react-start/server'
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { z } from 'zod'
-import { auth } from '#/lib/auth'
-
-async function getSession() {
-  const req = getRequest()
-  const session = await auth.api.getSession({ headers: req.headers })
-  return session
-}
+import { getSession } from '#/lib/server/session'
 
 function getR2Client() {
   return new S3Client({
@@ -40,7 +33,8 @@ export const getMealUploadUrlFn = createServerFn({ method: 'POST' })
       'image/webp': 'webp',
     }
     const ext = extMap[data.contentType] ?? 'jpg'
-    const key = `meals/${session.user.id}/${data.date}/${data.fileName}.${ext}`
+    const safeFileName = data.fileName.replace(/[^a-zA-Z0-9_-]/g, '_')
+    const key = `meals/${session.user.id}/${data.date}/${safeFileName}.${ext}`
 
     const r2 = getR2Client()
     const command = new PutObjectCommand({

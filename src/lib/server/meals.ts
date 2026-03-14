@@ -249,32 +249,36 @@ export const saveMealFn = createServerFn({ method: 'POST' })
 
     const loggedAt = data.loggedAt ? new Date(data.loggedAt) : new Date()
 
-    const [meal] = await db
-      .insert(meals)
-      .values({
-        userId: session.user.id,
-        tag: data.tag as MealTag,
-        loggedAt,
-        imageUrl: data.imageUrl ?? null,
-      })
-      .returning({ id: meals.id })
+    const mealId = await db.transaction(async (tx) => {
+      const [meal] = await tx
+        .insert(meals)
+        .values({
+          userId: session.user.id,
+          tag: data.tag as MealTag,
+          loggedAt,
+          imageUrl: data.imageUrl ?? null,
+        })
+        .returning({ id: meals.id })
 
-    if (!meal) throw new Error('Failed to create meal')
+      if (!meal) throw new Error('Failed to create meal')
 
-    await db.insert(mealFoods).values(
-      data.foods.map((food) => ({
-        mealId: meal.id,
-        name: food.name,
-        portionDescription: food.portionDescription ?? null,
-        calories: food.calories.toString(),
-        protein: food.protein?.toString() ?? null,
-        carbs: food.carbs?.toString() ?? null,
-        fat: food.fat?.toString() ?? null,
-        fiber: food.fiber?.toString() ?? null,
-      })),
-    )
+      await tx.insert(mealFoods).values(
+        data.foods.map((food) => ({
+          mealId: meal.id,
+          name: food.name,
+          portionDescription: food.portionDescription ?? null,
+          calories: food.calories.toString(),
+          protein: food.protein?.toString() ?? null,
+          carbs: food.carbs?.toString() ?? null,
+          fat: food.fat?.toString() ?? null,
+          fiber: food.fiber?.toString() ?? null,
+        })),
+      )
 
-    return { mealId: meal.id }
+      return meal.id
+    })
+
+    return { mealId }
   })
 
 const getMealsByDateSchema = z.object({
@@ -360,14 +364,11 @@ export const getMealDetailFn = createServerFn({ method: 'GET' })
     if (!session) throw new Error('Unauthorized')
 
     const meal = await db.query.meals.findFirst({
-      where: eq(meals.id, data.mealId),
-      with: {
-        mealFoods: true,
-      },
+      where: and(eq(meals.id, data.mealId), eq(meals.userId, session.user.id)),
+      with: { mealFoods: true },
     })
 
     if (!meal) throw new Error('Meal not found')
-    if (meal.userId !== session.user.id) throw new Error('Unauthorized')
 
     const { mealFoods, ...mealData } = meal
     return {
@@ -388,11 +389,10 @@ export const deleteMealFn = createServerFn({ method: 'POST' })
     if (!session) throw new Error('Unauthorized')
 
     const meal = await db.query.meals.findFirst({
-      where: eq(meals.id, data.mealId),
+      where: and(eq(meals.id, data.mealId), eq(meals.userId, session.user.id)),
     })
 
     if (!meal) throw new Error('Meal not found')
-    if (meal.userId !== session.user.id) throw new Error('Unauthorized')
 
     await db.delete(meals).where(eq(meals.id, data.mealId))
 
@@ -401,8 +401,8 @@ export const deleteMealFn = createServerFn({ method: 'POST' })
       try {
         const r2 = getR2Client()
         await r2.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME!, Key: key }))
-      } catch {
-        // R2 deletion is best-effort; DB record is already gone
+      } catch (err) {
+        console.error('[deleteMealFn] R2 deletion failed for key:', key, err)
       }
     }
 
