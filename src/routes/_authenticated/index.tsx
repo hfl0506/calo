@@ -1,5 +1,4 @@
 import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-router'
-import { getRequest } from '@tanstack/react-start/server'
 import { useEffect, useMemo, useState } from 'react'
 import PullToRefresh from 'react-simple-pull-to-refresh'
 import { getMealsByDateFn } from '#/lib/server/meals'
@@ -12,21 +11,9 @@ import type { Meal, MealTag } from '#/lib/types'
 
 export const Route = createFileRoute('/_authenticated/')({
   loader: async () => {
-    // On SSR (Railway/UTC), read the tz cookie set by the client's inline script.
-    // On client navigation, getRequest() returns null so we fall back to Intl.
-    let tz: string
-    try {
-      const req = getRequest()
-      const cookieHeader = req.headers.get('cookie') ?? ''
-      const tzCookie = cookieHeader.split(';').map((c) => c.trim()).find((c) => c.startsWith('tz='))
-      const decoded = tzCookie ? decodeURIComponent(tzCookie.slice(3)) : ''
-      tz = decoded || Intl.DateTimeFormat().resolvedOptions().timeZone
-    } catch {
-      tz = Intl.DateTimeFormat().resolvedOptions().timeZone
-    }
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: tz })
+    // getMealsByDateFn reads the tz cookie server-side to resolve the correct timezone
     const [meals, settings] = await Promise.all([
-      getMealsByDateFn({ data: { date: today, timezone: tz } }),
+      getMealsByDateFn({ data: {} }),
       getUserSettingsFn(),
     ])
     return { meals: meals as Meal[], settings }

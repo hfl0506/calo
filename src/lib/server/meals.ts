@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { getRequest } from '@tanstack/react-start/server'
 import { eq, and, gte, lt } from 'drizzle-orm'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
@@ -340,7 +341,18 @@ export const getMealsByDateFn = createServerFn({ method: 'GET' })
     const session = await getSession()
     if (!session) throw new Error('Unauthorized')
 
-    const tz = data.timezone ?? 'UTC'
+    // Resolve timezone: explicit arg > tz cookie > Intl (correct on client, UTC on server)
+    let tz = data.timezone
+    if (!tz) {
+      try {
+        const req = getRequest()
+        const cookieHeader = req.headers.get('cookie') ?? ''
+        const tzCookie = cookieHeader.split(';').map((c) => c.trim()).find((c) => c.startsWith('tz='))
+        if (tzCookie) tz = decodeURIComponent(tzCookie.slice(3))
+      } catch { /* client navigation: no server request context */ }
+    }
+    if (!tz) tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+
     const dateStr =
       data.date ??
       new Date().toLocaleDateString('en-CA', { timeZone: tz }) // YYYY-MM-DD in user's tz
