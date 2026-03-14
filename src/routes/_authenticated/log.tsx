@@ -28,6 +28,7 @@ function LogMealPage() {
   const [imageData, setImageData] = useState<{ base64: string; mimeType: string } | null>(null)
   const [adjustmentPrompt, setAdjustmentPrompt] = useState('')
   const [isAdjusting, setIsAdjusting] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
 
   const handleImage = async (base64: string, mimeType: string) => {
@@ -141,7 +142,8 @@ function LogMealPage() {
   }
 
   const handleSave = async () => {
-    if (foods.length === 0) return
+    if (foods.length === 0 || isSaving) return
+    setIsSaving(true)
     navigator.vibrate?.(10)
 
     // Snapshot state before navigating — prevents race if user retakes photo
@@ -278,7 +280,7 @@ function LogMealPage() {
         <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 border-t border-[var(--line)] bg-[var(--header-bg)] p-4 backdrop-blur-lg">
           <button
             type="button"
-            disabled={foods.length === 0}
+            disabled={foods.length === 0 || isSaving}
             onClick={() => void handleSave()}
             className="w-full rounded-xl bg-[var(--lagoon-deep)] px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
           >

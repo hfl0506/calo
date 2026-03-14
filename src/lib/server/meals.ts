@@ -1,13 +1,15 @@
 import { createServerFn } from '@tanstack/react-start'
 import { eq, and, gte, lt } from 'drizzle-orm'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import pRetry from 'p-retry'
 import { z } from 'zod'
 import { db } from '#/db'
 import { meals, mealFoods } from '#/db/schema'
 import { calcTotals } from '#/lib/nutrition'
 import { getSession } from '#/lib/server/session'
+import { getR2Client } from '#/lib/server/r2'
+import { analyzeRateLimiter, recalculateRateLimiter } from '#/lib/server/rate-limit'
 import type { AnalyzedFood, MealTag } from '#/lib/types'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
@@ -62,17 +64,6 @@ function localDateToUTC(localDatetime: string, timeZone: string): Date {
   return new Date(naive.getTime() - offsetMs)
 }
 
-function getR2Client() {
-  return new S3Client({
-    region: 'auto',
-    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-    },
-  })
-}
-
 
 const analyzePromptSchema = z.object({
   prompt: z.string().min(1).max(500),
@@ -87,6 +78,15 @@ const recalculateSchema = z.object({
 export const recalculateNutritionFn = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) => recalculateSchema.parse(data))
   .handler(async ({ data }) => {
+    const session = await getSession()
+    if (!session) throw new Error('Unauthorized')
+
+    try {
+      await recalculateRateLimiter.consume(session.user.id)
+    } catch {
+      return { error: 'Too many requests. Please wait a moment before adjusting again.' }
+    }
+
     try {
       const prompt = `You are a nutrition expert. Given:
 1. Original food name
@@ -111,7 +111,11 @@ Original food: "${data.originalName}"
 Portion: ${data.portionDescription ?? 'standard serving'}
 Adjustment: "${data.adjustmentPrompt}"`
 
-      const result = await pRetry(() => geminiModel.generateContent(prompt), { retries: 2 })
+      const result = await pRetry(() => geminiModel.generateContent(prompt), {
+        retries: 2,
+        minTimeout: 1000,
+        factor: 2,
+      })
       const content = result.response.text()
       const cleaned = content.replace(/```[a-z]*\n?/gi, '').trim()
 
@@ -126,6 +130,15 @@ Adjustment: "${data.adjustmentPrompt}"`
 export const analyzePromptFn = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) => analyzePromptSchema.parse(data))
   .handler(async ({ data }) => {
+    const session = await getSession()
+    if (!session) throw new Error('Unauthorized')
+
+    try {
+      await analyzeRateLimiter.consume(session.user.id)
+    } catch {
+      return { foods: [] as AnalyzedFood[], error: 'Too many requests. Please wait a moment before analyzing again.' }
+    }
+
     const { prompt } = data
 
     try {
@@ -158,7 +171,11 @@ All numeric values must be numbers (not strings).
 
 User message: ${prompt}`
 
-      const result = await pRetry(() => geminiModel.generateContent(fullPrompt), { retries: 2 })
+      const result = await pRetry(() => geminiModel.generateContent(fullPrompt), {
+        retries: 2,
+        minTimeout: 1000,
+        factor: 2,
+      })
       const content = result.response.text()
       const cleaned = content.replace(/```[a-z]*\n?/gi, '').trim()
 
@@ -193,6 +210,15 @@ const analyzeImageSchema = z.object({
 export const analyzeImageFn = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) => analyzeImageSchema.parse(data))
   .handler(async ({ data }) => {
+    const session = await getSession()
+    if (!session) throw new Error('Unauthorized')
+
+    try {
+      await analyzeRateLimiter.consume(session.user.id)
+    } catch {
+      return { foods: [] as AnalyzedFood[], error: 'Too many requests. Please wait a moment before analyzing again.' }
+    }
+
     const { imageBase64, mimeType } = data
 
     try {
@@ -216,7 +242,11 @@ Return ONLY a valid JSON array with no markdown fences:
 All numeric values must be numbers (not strings). If no food is visible return [].`
 
       const imagePart = { inlineData: { data: imageBase64, mimeType } }
-      const result = await pRetry(() => geminiModel.generateContent([promptText, imagePart]), { retries: 2 })
+      const result = await pRetry(() => geminiModel.generateContent([promptText, imagePart]), {
+        retries: 2,
+        minTimeout: 1000,
+        factor: 2,
+      })
       const content = result.response.text()
       const cleaned = content.replace(/```[a-z]*\n?/gi, '').trim()
 

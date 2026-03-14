@@ -68,6 +68,9 @@ importers:
       pg:
         specifier: ^8.16.3
         version: 8.20.0
+      rate-limiter-flexible:
+        specifier: ^10.0.0
+        version: 10.0.0
       react:
         specifier: ^19.2.0
         version: 19.2.4
@@ -4054,6 +4057,9 @@ packages:
 
   randombytes@2.1.0:
     resolution: {integrity: sha512-vYl3iOX+4CKUWuxGi9Ukhie6fsqXqS9FE2Zaic4tNFD2N2QQaXOMFbuKK4QmDHC0JO6B1Zp41J0LpT0oR68amQ==}
+
+  rate-limiter-flexible@10.0.0:
+    resolution: {integrity: sha512-+XgS+25UfodHJGXaTTfaFOyzVzk1zy9gH4hCyzOPcqywnE2DSEgEYS8GV8X+GiKRdNRp2F/hiY9m2S0z5Qbl1Q==}
 
   react-dom@19.2.4:
     resolution: {integrity: sha512-AXJdLo8kgMbimY95O2aKQqsz2iWi9jMgKJhRBAxECE4IFxfcazB2LmzloIoibJI3C12IlY20+KFaLv+71bUJeQ==}
@@ -9046,6 +9052,8 @@ snapshots:
   randombytes@2.1.0:
     dependencies:
       safe-buffer: 5.2.1
+
+  rate-limiter-flexible@10.0.0: {}
 
   react-dom@19.2.4(react@19.2.4):
     dependencies:

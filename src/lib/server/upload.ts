@@ -1,19 +1,9 @@
 import { createServerFn } from '@tanstack/react-start'
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { z } from 'zod'
 import { getSession } from '#/lib/server/session'
-
-function getR2Client() {
-  return new S3Client({
-    region: 'auto',
-    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-    },
-  })
-}
+import { getR2Client } from '#/lib/server/r2'
 
 const getMealUploadUrlSchema = z.object({
   fileName: z.string().min(1).max(100),

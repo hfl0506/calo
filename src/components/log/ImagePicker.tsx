@@ -53,6 +53,7 @@ export default function ImagePicker({ onImage, onPrompt }: ImagePickerProps) {
   const uploadInputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [fileError, setFileError] = useState<string | null>(null)
   const [promptText, setPromptText] = useState('')
   const [mode, setMode] = useState<'photo' | 'text'>('photo')
 
@@ -64,6 +65,14 @@ export default function ImagePicker({ onImage, onPrompt }: ImagePickerProps) {
 
   const handleFile = async (file: File) => {
     if (!file) return
+    setFileError(null)
+
+    const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
+    if (file.size > MAX_FILE_SIZE) {
+      setFileError('Image is too large. Please choose a photo under 50MB.')
+      return
+    }
+
     setIsProcessing(true)
     try {
       const { base64, mimeType } = await compressImage(file)
@@ -151,7 +160,13 @@ export default function ImagePicker({ onImage, onPrompt }: ImagePickerProps) {
 
       {mode === 'photo' ? (
         <>
-          <div className="island-shell flex h-40 w-full max-w-sm flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[var(--lagoon-deep)] p-6 text-center opacity-60">
+          {fileError && (
+        <div role="alert" className="w-full max-w-sm rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900 dark:bg-red-950 dark:text-red-400">
+          {fileError}
+        </div>
+      )}
+
+      <div className="island-shell flex h-40 w-full max-w-sm flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[var(--lagoon-deep)] p-6 text-center opacity-60">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="40"
