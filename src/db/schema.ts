@@ -1,4 +1,4 @@
-import { boolean, integer, numeric, pgEnum, pgTable, serial, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { boolean, index, integer, numeric, pgEnum, pgTable, serial, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
 export const todos = pgTable('todos', {
@@ -80,7 +80,9 @@ export const meals = pgTable('meals', {
   imageUrl: text('image_url'),
   notes: text('notes'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-})
+}, (table) => [
+  index('meals_user_logged_at_idx').on(table.userId, table.loggedAt),
+])
 
 export const mealFoods = pgTable('meal_foods', {
   id: serial('id').primaryKey(),
@@ -95,7 +97,9 @@ export const mealFoods = pgTable('meal_foods', {
   fat: numeric('fat', { precision: 8, scale: 2 }),
   fiber: numeric('fiber', { precision: 8, scale: 2 }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-})
+}, (table) => [
+  index('meal_foods_meal_id_idx').on(table.mealId),
+])
 
 export const userSettingsRelations = relations(userSettings, ({ one }) => ({
   user: one(user, {
