@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import type { AnalyzedFood } from '#/lib/types'
 
 interface FoodReviewItemProps {
@@ -7,7 +7,7 @@ interface FoodReviewItemProps {
   onDelete: () => void
 }
 
-export default function FoodReviewItem({ food, onChange, onDelete }: FoodReviewItemProps) {
+export default memo(function FoodReviewItem({ food, onChange, onDelete }: FoodReviewItemProps) {
   const [expanded, setExpanded] = useState(false)
 
   const update = (field: keyof AnalyzedFood, value: string | number) => {
@@ -118,7 +118,7 @@ export default function FoodReviewItem({ food, onChange, onDelete }: FoodReviewI
       </div>
     </div>
   )
-}
+})
 
 function MacroInput({
   label,

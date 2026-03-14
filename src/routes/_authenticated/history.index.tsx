@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { getMealsRangeFn } from '#/lib/server/meals'
 import { prefetchMealDetail } from '#/lib/meal-prefetch-cache'
 import { HistorySkeleton } from '#/components/SkeletonCard'
-import { formatTime } from '#/lib/format'
+import { formatDate, formatTime } from '#/lib/format'
 import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
 import type { Meal } from '#/lib/types'
 
@@ -11,19 +11,6 @@ export const Route = createFileRoute('/_authenticated/history/')({
   component: HistoryPage,
 })
 
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00')
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
-  const today = new Date()
-  const todayStr = today.toLocaleDateString('en-CA', { timeZone: tz })
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-  const yesterdayStr = yesterday.toLocaleDateString('en-CA', { timeZone: tz })
-
-  if (dateStr === todayStr) return 'Today'
-  if (dateStr === yesterdayStr) return 'Yesterday'
-  return date.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })
-}
 
 const PAGE_DAYS = 7
 

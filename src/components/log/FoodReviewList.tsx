@@ -1,3 +1,4 @@
+import { memo, useCallback, useRef } from 'react'
 import type { AnalyzedFood } from '#/lib/types'
 import FoodReviewItem from './FoodReviewItem'
 
@@ -6,18 +7,22 @@ interface FoodReviewListProps {
   onChange: (foods: AnalyzedFood[]) => void
 }
 
-export default function FoodReviewList({ foods, onChange }: FoodReviewListProps) {
-  const handleChange = (index: number, food: AnalyzedFood) => {
-    const updated = [...foods]
+export default memo(function FoodReviewList({ foods, onChange }: FoodReviewListProps) {
+  // Stable ref so callbacks don't close over stale `foods`
+  const foodsRef = useRef(foods)
+  foodsRef.current = foods
+
+  const handleChange = useCallback((index: number, food: AnalyzedFood) => {
+    const updated = [...foodsRef.current]
     updated[index] = food
     onChange(updated)
-  }
+  }, [onChange])
 
-  const handleDelete = (index: number) => {
-    onChange(foods.filter((_, i) => i !== index))
-  }
+  const handleDelete = useCallback((index: number) => {
+    onChange(foodsRef.current.filter((_, i) => i !== index))
+  }, [onChange])
 
-  const handleAddManual = () => {
+  const handleAddManual = useCallback(() => {
     const emptyFood: AnalyzedFood = {
       id: crypto.randomUUID(),
       name: '',
@@ -28,8 +33,8 @@ export default function FoodReviewList({ foods, onChange }: FoodReviewListProps)
       fat: 0,
       fiber: 0,
     }
-    onChange([...foods, emptyFood])
-  }
+    onChange([...foodsRef.current, emptyFood])
+  }, [onChange])
 
   return (
     <div className="space-y-3">
@@ -65,4 +70,4 @@ export default function FoodReviewList({ foods, onChange }: FoodReviewListProps)
       </button>
     </div>
   )
-}
+})

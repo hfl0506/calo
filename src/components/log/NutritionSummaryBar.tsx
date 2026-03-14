@@ -1,11 +1,12 @@
+import { memo, useMemo } from 'react'
 import type { AnalyzedFood } from '#/lib/types'
 
 interface NutritionSummaryBarProps {
   foods: AnalyzedFood[]
 }
 
-export default function NutritionSummaryBar({ foods }: NutritionSummaryBarProps) {
-  const totals = foods.reduce(
+export default memo(function NutritionSummaryBar({ foods }: NutritionSummaryBarProps) {
+  const totals = useMemo(() => foods.reduce(
     (acc, food) => ({
       calories: acc.calories + (food.calories ?? 0),
       protein: acc.protein + (food.protein ?? 0),
@@ -14,7 +15,7 @@ export default function NutritionSummaryBar({ foods }: NutritionSummaryBarProps)
       fiber: acc.fiber + (food.fiber ?? 0),
     }),
     { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
-  )
+  ), [foods])
 
   return (
     <div className="island-shell sticky top-14 z-10 rounded-none border-x-0 border-t-0 px-4 py-3">
@@ -37,7 +38,7 @@ export default function NutritionSummaryBar({ foods }: NutritionSummaryBarProps)
       </div>
     </div>
   )
-}
+})
 
 function MacroChip({ label, value, unit }: { label: string; value: number; unit: string }) {
   return (
