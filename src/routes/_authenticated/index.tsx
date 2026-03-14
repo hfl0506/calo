@@ -1,8 +1,10 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import PullToRefresh from 'react-simple-pull-to-refresh'
 import { getMealsByDateFn } from '#/lib/server/meals'
 import { getUserSettingsFn } from '#/lib/server/settings'
 import { prefetchMealDetail } from '#/lib/meal-prefetch-cache'
+import { HomeSkeleton } from '#/components/SkeletonCard'
 import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
 import type { Meal, MealTag } from '#/lib/types'
 
@@ -46,21 +48,20 @@ function HomePage() {
     }
   }, [search, navigate])
 
-  useEffect(() => {
+  const fetchData = useCallback(async () => {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
     const today = new Date().toLocaleDateString('en-CA', { timeZone: tz })
-
-    Promise.all([
+    const [mealsData, settings] = await Promise.all([
       getMealsByDateFn({ data: { date: today, timezone: tz } }),
       getUserSettingsFn(),
     ])
-      .then(([mealsData, settings]) => {
-        setMeals(mealsData as Meal[])
-        setDailyGoal(settings.dailyCalorieGoal)
-      })
-      .catch(console.error)
-      .finally(() => setIsLoading(false))
-  }, [refreshKey])
+    setMeals(mealsData as Meal[])
+    setDailyGoal(settings.dailyCalorieGoal)
+  }, [])
+
+  useEffect(() => {
+    fetchData().catch(console.error).finally(() => setIsLoading(false))
+  }, [fetchData, refreshKey])
 
   const totalCalories = meals.reduce((sum, m) => sum + m.totals.calories, 0)
   const totalProtein = meals.reduce((sum, m) => sum + m.totals.protein, 0)
@@ -77,7 +78,14 @@ function HomePage() {
     {} as Record<string, number>,
   )
 
+  if (isLoading) return <HomeSkeleton />
+
   return (
+    <PullToRefresh onRefresh={fetchData} pullingContent="" refreshingContent={
+      <div className="flex justify-center py-3">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent" />
+      </div>
+    }>
     <div className="px-4 py-6 pb-24">
       {isSaving && (
         <div className="rise-in mb-4 flex items-center gap-3 rounded-xl border border-[var(--lagoon-deep)] bg-[rgba(79,184,178,0.08)] px-4 py-3">
@@ -159,11 +167,7 @@ function HomePage() {
       </div>
 
       {/* Meals list */}
-      {isLoading ? (
-        <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent" />
-        </div>
-      ) : meals.length === 0 ? (
+      {meals.length === 0 ? (
         <div className="rise-in flex flex-col items-center gap-4 py-12 text-center">
           <span className="text-5xl">🥗</span>
           <h3 className="text-lg font-semibold text-[var(--sea-ink)]">No meals logged today</h3>
@@ -227,5 +231,6 @@ function HomePage() {
       )}
 
     </div>
+    </PullToRefresh>
   )
 }

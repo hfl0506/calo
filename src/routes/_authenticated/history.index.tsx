@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useRef, useState } from 'react'
 import { getMealsRangeFn } from '#/lib/server/meals'
 import { prefetchMealDetail } from '#/lib/meal-prefetch-cache'
+import { HistorySkeleton } from '#/components/SkeletonCard'
 import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
 import type { Meal } from '#/lib/types'
 
@@ -118,9 +119,7 @@ function HistoryPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent" />
-        </div>
+        <HistorySkeleton />
       ) : sortedDates.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-12 text-center">
           <span className="text-5xl">📋</span>

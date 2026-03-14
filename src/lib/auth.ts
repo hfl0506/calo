@@ -13,4 +13,19 @@ export const auth = betterAuth({
     enabled: true,
   },
   plugins: [tanstackStartCookies()],
+  rateLimit: {
+    window: 60,
+    max: 100,
+    customRules: {
+      '/sign-in/email': { window: 10, max: 5 },
+      '/sign-up/email': { window: 10, max: 3 },
+      '/get-session': false,
+    },
+  },
+  advanced: {
+    ipAddress: {
+      ipAddressHeaders: ['x-forwarded-for'],
+      ipv6Subnet: 64,
+    },
+  },
 })

@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { eq, and, gte, lt } from 'drizzle-orm'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import pRetry from 'p-retry'
 import { z } from 'zod'
 import { db } from '#/db'
 import { meals, mealFoods } from '#/db/schema'
@@ -96,7 +97,7 @@ Original food: "${data.originalName}"
 Portion: ${data.portionDescription ?? 'standard serving'}
 Adjustment: "${data.adjustmentPrompt}"`
 
-      const result = await geminiModel.generateContent(prompt)
+      const result = await pRetry(() => geminiModel.generateContent(prompt), { retries: 2 })
       const content = result.response.text()
       const cleaned = content.replace(/```[a-z]*\n?/gi, '').trim()
 
@@ -142,7 +143,7 @@ All numeric values must be numbers (not strings).
 
 User message: ${prompt}`
 
-      const result = await geminiModel.generateContent(fullPrompt)
+      const result = await pRetry(() => geminiModel.generateContent(fullPrompt), { retries: 2 })
       const content = result.response.text()
       const cleaned = content.replace(/```[a-z]*\n?/gi, '').trim()
 
@@ -201,7 +202,7 @@ Return ONLY a valid JSON array with no markdown fences:
 All numeric values must be numbers (not strings). If no food is visible return [].`
 
       const imagePart = { inlineData: { data: imageBase64, mimeType } }
-      const result = await geminiModel.generateContent([promptText, imagePart])
+      const result = await pRetry(() => geminiModel.generateContent([promptText, imagePart]), { retries: 2 })
       const content = result.response.text()
       const cleaned = content.replace(/```[a-z]*\n?/gi, '').trim()
 

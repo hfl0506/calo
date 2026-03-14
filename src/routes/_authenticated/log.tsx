@@ -142,6 +142,7 @@ function LogMealPage() {
 
   const handleSave = async () => {
     if (foods.length === 0) return
+    navigator.vibrate?.(10)
 
     // Navigate home immediately — save happens in the background
     await navigate({ to: '/', search: { saving: true } })

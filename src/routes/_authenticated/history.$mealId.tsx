@@ -67,6 +67,7 @@ function MealDetailPage() {
   }, [mealId])
 
   const handleDelete = async () => {
+    navigator.vibrate?.(10)
     setIsDeleting(true)
     try {
       await deleteMealFn({ data: { mealId } })
