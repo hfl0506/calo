@@ -74,16 +74,18 @@ function HomePage() {
 
   useEffect(() => {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: tz }) // YYYY-MM-DD in local tz
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: tz })
 
-    getMealsByDateFn({ data: { date: today, timezone: tz } })
-      .then((data) => setMeals(data as MealWithFoods[]))
+    Promise.all([
+      getMealsByDateFn({ data: { date: today, timezone: tz } }),
+      getUserSettingsFn(),
+    ])
+      .then(([mealsData, settings]) => {
+        setMeals(mealsData as MealWithFoods[])
+        setDailyGoal(settings.dailyCalorieGoal)
+      })
       .catch(console.error)
       .finally(() => setIsLoading(false))
-
-    getUserSettingsFn()
-      .then((settings) => setDailyGoal(settings.dailyCalorieGoal))
-      .catch(console.error)
   }, [])
 
   const totalCalories = meals.reduce((sum, m) => sum + m.totals.calories, 0)
