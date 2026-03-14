@@ -322,6 +322,39 @@ export const getMealsByDateFn = createServerFn({ method: 'GET' })
     }))
   })
 
+const getMealsRangeSchema = z.object({
+  startDate: z.string(), // YYYY-MM-DD
+  endDate: z.string(),   // YYYY-MM-DD
+  timezone: z.string().optional(),
+})
+
+export const getMealsRangeFn = createServerFn({ method: 'GET' })
+  .inputValidator((data: unknown) => getMealsRangeSchema.parse(data))
+  .handler(async ({ data }) => {
+    const session = await getSession()
+    if (!session) throw new Error('Unauthorized')
+
+    const tz = data.timezone ?? 'UTC'
+    const startDate = localDateToUTC(`${data.startDate}T00:00:00`, tz)
+    const endDate = localDateToUTC(`${data.endDate}T23:59:59.999`, tz)
+
+    const mealRows = await db.query.meals.findMany({
+      where: and(
+        eq(meals.userId, session.user.id),
+        gte(meals.loggedAt, startDate),
+        lt(meals.loggedAt, endDate),
+      ),
+      with: { mealFoods: true },
+      orderBy: (meals, { desc }) => [desc(meals.loggedAt)],
+    })
+
+    return mealRows.map((meal) => ({
+      ...meal,
+      foods: meal.mealFoods,
+      totals: calcTotals(meal.mealFoods),
+    }))
+  })
+
 const getMealDetailSchema = z.object({
   mealId: z.string().uuid(),
 })

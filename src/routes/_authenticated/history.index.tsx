@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { getMealsByDateFn } from '#/lib/server/meals'
+import { getMealsRangeFn } from '#/lib/server/meals'
 import type { MealTag } from '#/lib/types'
 
 export const Route = createFileRoute('/_authenticated/history/')({
@@ -84,24 +84,23 @@ function HistoryPage() {
 
   useEffect(() => {
     const fetchLast7Days = async () => {
-      const results: Record<string, MealWithFoods[]> = {}
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
       const today = new Date()
+      const endDate = today.toLocaleDateString('en-CA', { timeZone: tz })
+      const start = new Date(today)
+      start.setDate(start.getDate() - 6)
+      const startDate = start.toLocaleDateString('en-CA', { timeZone: tz })
 
-      await Promise.all(
-        Array.from({ length: 7 }, (_, i) => {
-          const date = new Date(today)
-          date.setDate(date.getDate() - i)
-          const dateStr = date.toLocaleDateString('en-CA', { timeZone: tz }) // YYYY-MM-DD in local tz
-          return getMealsByDateFn({ data: { date: dateStr, timezone: tz } }).then((meals) => {
-            if (meals.length > 0) {
-              results[dateStr] = meals as MealWithFoods[]
-            }
-          })
-        }),
-      )
+      const allMeals = await getMealsRangeFn({ data: { startDate, endDate, timezone: tz } })
 
-      setMealsByDate(results)
+      const grouped: Record<string, MealWithFoods[]> = {}
+      for (const meal of allMeals as MealWithFoods[]) {
+        const dateStr = new Date(meal.loggedAt!).toLocaleDateString('en-CA', { timeZone: tz })
+        if (!grouped[dateStr]) grouped[dateStr] = []
+        grouped[dateStr].push(meal)
+      }
+
+      setMealsByDate(grouped)
       setIsLoading(false)
     }
 

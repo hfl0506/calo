@@ -262,7 +262,7 @@ function MealDetailPage() {
 
       {/* Delete confirmation modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 pb-6 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="island-shell rise-in mx-4 w-full max-w-sm rounded-2xl p-6">
             <h3 className="mb-2 text-base font-bold text-[var(--sea-ink)]">Delete this meal?</h3>
             <p className="mb-5 text-sm text-[var(--sea-ink-soft)]">
