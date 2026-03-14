@@ -26,8 +26,9 @@ const config = defineConfig({
         navigateFallback: null, // SSR handles navigation
         runtimeCaching: [
           {
-            // Cache meal images from R2
-            urlPattern: ({ url }) => url.pathname.startsWith('/meals/'),
+            // Cache meal images from R2 (cross-origin, e.g. pub-xxx.r2.dev or custom CDN domain)
+            urlPattern: ({ url, request }) =>
+              url.pathname.startsWith('/meals/') && request.destination === 'image',
             handler: 'CacheFirst',
             options: {
               cacheName: 'meal-images',

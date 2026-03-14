@@ -23,6 +23,7 @@ function HistoryPage() {
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set())
   const sentinelRef = useRef<HTMLDivElement>(null)
   const isLoadingMoreRef = useRef(false)
+  const consecutiveEmptyRef = useRef(0)
 
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
 
@@ -43,8 +44,13 @@ function HistoryPage() {
 
     setMealsByDate((prev) => append ? { ...prev, ...grouped } : grouped)
     setOldestDate(startDate)
-    // If we got fewer days with data than requested, there's likely nothing further back
-    if (allMeals.length === 0) setHasMore(false)
+    // Stop only after 3 consecutive empty windows (21 days gap) to handle gaps in logging
+    if (allMeals.length === 0) {
+      consecutiveEmptyRef.current += 1
+      if (consecutiveEmptyRef.current >= 3) setHasMore(false)
+    } else {
+      consecutiveEmptyRef.current = 0
+    }
   }
 
   const toggleExpand = (dateStr: string) => {
