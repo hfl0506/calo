@@ -60,15 +60,27 @@ A mobile-first calorie and nutrition tracking app powered by Google Gemini AI. S
 <table>
   <tr>
     <td align="center"><b>Home</b></td>
-    <td align="center"><b>Log Meal</b></td>
-    <td align="center"><b>Analysis</b></td>
-    <td align="center"><b>History</b></td>
+    <td align="center"><b>Log — Photo</b></td>
+    <td align="center"><b>Log — Describe</b></td>
+    <td align="center"><b>Meal Detail</b></td>
   </tr>
   <tr>
-    <td><img src="screenshots/home.png" width="200"/></td>
-    <td><img src="screenshots/log.png" width="200"/></td>
-    <td><img src="screenshots/analysis.png" width="200"/></td>
-    <td><img src="screenshots/history.png" width="200"/></td>
+    <td><img src="screenshots/home.png" width="180"/></td>
+    <td><img src="screenshots/log-photo.png" width="180"/></td>
+    <td><img src="screenshots/log-describe.png" width="180"/></td>
+    <td><img src="screenshots/meal-detail.png" width="180"/></td>
+  </tr>
+  <tr>
+    <td align="center"><b>History — Log</b></td>
+    <td align="center"><b>History — Trend</b></td>
+    <td align="center"><b>Settings</b></td>
+    <td></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/history-log.png" width="180"/></td>
+    <td><img src="screenshots/history-trend.png" width="180"/></td>
+    <td><img src="screenshots/settings.png" width="180"/></td>
+    <td></td>
   </tr>
 </table>
 
