@@ -5,6 +5,7 @@ import { prefetchMealDetail } from '#/lib/meal-prefetch-cache'
 import { HistorySkeleton } from '#/components/SkeletonCard'
 import { formatDate, formatTime } from '#/lib/format'
 import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
+import { CalorieTrendChart } from '#/components/CalorieTrendChart'
 import type { Meal } from '#/lib/types'
 
 export const Route = createFileRoute('/_authenticated/history/')({
@@ -15,6 +16,7 @@ export const Route = createFileRoute('/_authenticated/history/')({
 const PAGE_DAYS = 7
 
 function HistoryPage() {
+  const [view, setView] = useState<'list' | 'trend'>('list')
   const [mealsByDate, setMealsByDate] = useState<Record<string, Meal[]>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
@@ -103,11 +105,37 @@ function HistoryPage() {
 
   return (
     <div className="px-4 py-6 pb-24">
-      <div className="mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <h1 className="text-xl font-bold text-[var(--sea-ink)]">History</h1>
+        <div className="flex overflow-hidden rounded-lg border border-[var(--line)]">
+          <button
+            type="button"
+            onClick={() => setView('list')}
+            className={`px-3 py-1.5 text-xs font-semibold transition ${
+              view === 'list'
+                ? 'bg-[var(--lagoon-deep)] text-white'
+                : 'text-[var(--sea-ink-soft)] hover:text-[var(--sea-ink)]'
+            }`}
+          >
+            Log
+          </button>
+          <button
+            type="button"
+            onClick={() => setView('trend')}
+            className={`px-3 py-1.5 text-xs font-semibold transition ${
+              view === 'trend'
+                ? 'bg-[var(--lagoon-deep)] text-white'
+                : 'text-[var(--sea-ink-soft)] hover:text-[var(--sea-ink)]'
+            }`}
+          >
+            Trend
+          </button>
+        </div>
       </div>
 
-      {isLoading ? (
+      {view === 'trend' && <CalorieTrendChart />}
+
+      {view === 'list' && (isLoading ? (
         <HistorySkeleton />
       ) : sortedDates.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-12 text-center">
@@ -271,7 +299,7 @@ function HistoryPage() {
             </p>
           )}
         </div>
-      )}
+      ))}
 
     </div>
   )
