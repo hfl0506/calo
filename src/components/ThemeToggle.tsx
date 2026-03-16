@@ -3,15 +3,11 @@ import { useEffect, useState } from 'react'
 type ThemeMode = 'light' | 'dark' | 'auto'
 
 function getInitialMode(): ThemeMode {
-  if (typeof window === 'undefined') {
-    return 'auto'
-  }
-
-  const stored = window.localStorage.getItem('theme')
-  if (stored === 'light' || stored === 'dark' || stored === 'auto') {
-    return stored
-  }
-
+  if (typeof window === 'undefined') return 'auto'
+  try {
+    const stored = window.localStorage.getItem('theme')
+    if (stored === 'light' || stored === 'dark' || stored === 'auto') return stored
+  } catch { /* localStorage unavailable (private browsing, etc.) */ }
   return 'auto'
 }
 
@@ -63,7 +59,7 @@ export default function ThemeToggle() {
   function selectMode(next: ThemeMode) {
     setMode(next)
     applyThemeMode(next)
-    window.localStorage.setItem('theme', next)
+    try { window.localStorage.setItem('theme', next) } catch { /* ignore */ }
   }
 
   return (

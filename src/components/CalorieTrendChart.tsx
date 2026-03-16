@@ -111,7 +111,8 @@ export function CalorieTrendChart() {
       }
 
       for (const meal of meals) {
-        const ds = new Date(meal.loggedAt!).toLocaleDateString("en-CA", {
+        if (!meal.loggedAt) continue;
+        const ds = new Date(meal.loggedAt).toLocaleDateString("en-CA", {
           timeZone: tz,
         });
         const ex = dataMap.get(ds);

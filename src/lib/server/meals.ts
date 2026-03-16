@@ -28,6 +28,11 @@ import { ANALYZE_TEXT_PROMPT, ANALYZE_IMAGE_PROMPT, RECALCULATE_PROMPT } from "#
 
 const EMPTY_FOODS: AnalyzedFood[] = [];
 
+const timezoneSchema = z.string().refine(
+  (tz) => { try { Intl.DateTimeFormat(undefined, { timeZone: tz }); return true } catch { return false } },
+  { message: "Invalid timezone" }
+)
+
 function cleanGeminiJson(raw: string): string {
   return raw.replace(/```[a-z]*\n?/gi, "").trim()
 }
@@ -300,10 +305,7 @@ export const saveMealFn = createServerFn({ method: "POST" })
 
 const getMealsByDateSchema = z.object({
   date: z.string().optional(),
-  timezone: z.string().refine(
-    (tz) => { try { Intl.DateTimeFormat(undefined, { timeZone: tz }); return true } catch { return false } },
-    { message: "Invalid timezone" }
-  ).optional(),
+  timezone: timezoneSchema.optional(),
 });
 
 export const getMealsByDateFn = createServerFn({ method: "GET" })
@@ -346,10 +348,7 @@ export const getMealsByDateFn = createServerFn({ method: "GET" })
 const getMealsRangeSchema = z.object({
   startDate: z.string(), // YYYY-MM-DD
   endDate: z.string(), // YYYY-MM-DD
-  timezone: z.string().refine(
-    (tz) => { try { Intl.DateTimeFormat(undefined, { timeZone: tz }); return true } catch { return false } },
-    { message: "Invalid timezone" }
-  ).optional(),
+  timezone: timezoneSchema.optional(),
 });
 
 export const getMealsRangeFn = createServerFn({ method: "GET" })

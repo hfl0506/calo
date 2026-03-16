@@ -52,7 +52,7 @@ export function prefetchMealDetail(mealId: string): void {
   if (inflight.has(mealId)) return
 
   inflight.add(mealId)
-  getMealDetailFn({ data: { mealId } })
+  void getMealDetailFn({ data: { mealId } })
     .then((data) => {
       evictExpired()
       if (cache.size >= MAX_SIZE) evictOldest()

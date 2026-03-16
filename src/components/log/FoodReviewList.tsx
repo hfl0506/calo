@@ -10,7 +10,7 @@ interface FoodReviewListProps {
 
 export default memo(function FoodReviewList({ foods, onChange }: FoodReviewListProps) {
   // Stable ref so callbacks don't close over stale `foods`
-  const foodsRef = useRef(foods)
+  const foodsRef = useRef<AnalyzedFood[]>(foods)
   foodsRef.current = foods
 
   const handleChange = useCallback((index: number, food: AnalyzedFood) => {

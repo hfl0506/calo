@@ -32,7 +32,7 @@ function HistoryPage() {
 
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
 
-  const fetchRange = async (endDate: string, append: boolean) => {
+  const fetchRange = useCallback(async (endDate: string, append: boolean) => {
     const end = new Date(endDate + 'T00:00:00')
     const start = new Date(end)
     start.setDate(start.getDate() - (PAGE_DAYS - 1))
@@ -51,7 +51,7 @@ function HistoryPage() {
     } else {
       consecutiveEmptyRef.current = 0
     }
-  }
+  }, [tz])
 
   const toggleExpand = (dateStr: string) => {
     setExpandedDates((prev) => {
@@ -64,8 +64,8 @@ function HistoryPage() {
 
   useEffect(() => {
     const today = new Date().toLocaleDateString('en-CA', { timeZone: tz })
-    fetchRange(today, false).finally(() => setIsLoading(false))
-  }, [])
+    void fetchRange(today, false).finally(() => setIsLoading(false))
+  }, [fetchRange, tz])
 
   const handleLoadMore = useCallback(async () => {
     if (!oldestDate || isLoadingMoreRef.current) return
@@ -76,14 +76,15 @@ function HistoryPage() {
       prev.setDate(prev.getDate() - 1)
       const newEnd = prev.toLocaleDateString('en-CA', { timeZone: tz })
       await fetchRange(newEnd, true)
-    } catch {
+    } catch (err) {
+      console.error('[history] failed to load more:', err)
       setLoadMoreError(true)
       setHasMore(false)
     } finally {
       isLoadingMoreRef.current = false
       setIsLoadingMore(false)
     }
-  }, [oldestDate, tz])
+  }, [oldestDate, tz, fetchRange])
 
   useEffect(() => {
     const sentinel = sentinelRef.current
