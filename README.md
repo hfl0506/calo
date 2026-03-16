@@ -10,11 +10,17 @@ A mobile-first calorie and nutrition tracking app powered by Google Gemini AI. S
 - **Photo Upload** — Meal images are compressed to WebP client-side and stored in Cloudflare R2
 - **Manual Adjustments** — Tweak any food item after analysis (e.g. "half of it", "coke zero", "skip rice")
 - **Daily Summary** — Home screen shows today's total calories, macros, and a progress bar against your daily goal
+- **Calorie Goal Warning** — A warning banner appears during meal review if the meal would exceed your daily calorie goal
 - **Meal History** — Infinite scroll history grouped by date; tap any meal for full detail
+- **Undo Delete** — Deleting a meal shows a 5-second countdown toast with an undo button before the deletion is committed
+- **Period Analytics** — 7/30/90-day trend chart with an insights card showing average calories, total surplus/deficit, days logged, and macro warnings
+- **Macro Warnings** — Alerts when protein, carbs, fat, or fiber averaged below 70% of your goal over a period (requires ≥3 days logged)
 - **Meal Tags** — Categorise meals as Breakfast, Lunch, Dinner, or Snacks
-- **Daily Calorie Goal** — Set your personal calorie target in Settings
+- **Daily & Macro Goals** — Set calorie target plus optional protein, carbs, fat, and fiber goals in Settings
+- **Recent Foods** — Foods you log are cached locally for one-tap re-logging; manage or clear them from Settings
 - **Dark / Light / Auto Theme** — Follows system preference by default
 - **Authentication** — Email & password sign-up / sign-in via Better Auth
+- **Rate Limit Feedback** — When AI analysis is rate-limited, the error message shows the exact seconds remaining before retry
 
 ---
 
@@ -132,19 +138,27 @@ pnpm db:studio     # open Drizzle Studio GUI
 ```
 src/
 ├── components/
-│   └── log/            # Food logging UI components
+│   ├── log/                # Food logging UI components
+│   ├── CalorieTrendChart.tsx   # Period trend chart (uses SvgBarChart + InsightsCard)
+│   ├── InsightsCard.tsx        # Period analytics summary (avg kcal, surplus/deficit, macro warnings)
+│   ├── NutrientCard.tsx        # Single macro display card (reused in meal detail)
+│   ├── SvgBarChart.tsx         # SVG bar chart primitive
+│   └── UndoToast.tsx           # 5-second undo toast with progress bar
 ├── db/
-│   ├── index.ts        # Drizzle client + pg connection pool
-│   └── schema.ts       # Database schema & indexes
+│   ├── index.ts            # Drizzle client + pg connection pool
+│   └── schema.ts           # Database schema & indexes
 ├── lib/
-│   ├── env.ts          # Startup environment validation
-│   ├── nutrition.ts    # calcTotals helper
-│   ├── types.ts        # Shared types & constants
+│   ├── analytics.ts        # computeInsights() — weekly/monthly analytics logic
+│   ├── env.ts              # Startup environment validation
+│   ├── nutrition.ts        # calcTotals, roundMacro helpers
+│   ├── recent-foods.ts     # localStorage recent-foods cache with useSyncExternalStore
+│   ├── timezone.ts         # localDateToUTC() — DST-safe datetime conversion
+│   ├── types.ts            # Shared types & constants
 │   └── server/
-│       ├── meals.ts    # Meal CRUD + Gemini AI analysis
-│       ├── session.ts  # Shared auth session helper
-│       ├── settings.ts # User settings
-│       └── upload.ts   # R2 presigned URL generation
+│       ├── meals.ts        # Meal CRUD + Gemini AI analysis
+│       ├── session.ts      # Shared auth session helper
+│       ├── settings.ts     # User settings (calorie + macro goals)
+│       └── upload.ts       # R2 presigned URL generation
 ├── routes/
 │   ├── __root.tsx               # Root layout + error boundary
 │   ├── _authenticated.tsx       # Auth guard layout
@@ -152,8 +166,8 @@ src/
 │   │   ├── index.tsx            # Home (today's summary)
 │   │   ├── log.tsx              # Log a meal
 │   │   ├── history.index.tsx    # Meal history
-│   │   ├── history.$mealId.tsx  # Meal detail
-│   │   └── settings.tsx         # User settings
+│   │   ├── history.$mealId.tsx  # Meal detail + undo delete
+│   │   └── settings.tsx         # User settings + recent foods manager
 │   ├── sign-in.tsx
 │   └── sign-up.tsx
 └── styles.css
