@@ -170,15 +170,9 @@ function LogMealPage() {
     setIsSaving(true)
     navigator.vibrate?.(10)
 
-    // Snapshot state before navigating — prevents race if user retakes photo
     const savedFoods = foods
     const savedImageData = imageData
-
-    // Persist foods to recent list before navigating
     saveRecentFoods(savedFoods)
-
-    // Navigate home immediately — save happens in the background
-    await navigate({ to: '/', search: { saving: true } })
 
     try {
       let imageUrl: string | undefined
@@ -203,9 +197,11 @@ function LogMealPage() {
         },
       })
 
-      await navigate({ to: '/', search: { saved: true }, replace: true })
+      await navigate({ to: '/', search: { saved: true } })
     } catch {
-      await navigate({ to: '/', search: { saveError: true }, replace: true })
+      await navigate({ to: '/', search: { saveError: true } })
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -381,7 +377,7 @@ function LogMealPage() {
             onClick={() => void handleSave()}
             className="w-full rounded-xl bg-[var(--lagoon-deep)] px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
           >
-            {`Save Meal (${Math.round(foods.reduce((s, f) => s + f.calories, 0))} kcal)`}
+            {isSaving ? 'Saving…' : `Save Meal (${Math.round(foods.reduce((s, f) => s + f.calories, 0))} kcal)`}
           </button>
         </div>
       )}

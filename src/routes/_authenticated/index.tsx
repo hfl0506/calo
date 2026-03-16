@@ -217,10 +217,10 @@ function HomePage() {
         {/* Macro totals */}
         <div className="mb-4 grid grid-cols-4 gap-2">
           {[
-            { label: 'Protein', value: totalProtein, goal: settings.proteinGoal, color: '#6366f1' },
-            { label: 'Carbs',   value: totalCarbs,   goal: settings.carbsGoal,   color: '#d97706' },
-            { label: 'Fat',     value: totalFat,     goal: settings.fatGoal,     color: '#e11d48' },
-            { label: 'Fiber',   value: totalFiber,   goal: settings.fiberGoal,  color: '#16a34a' },
+            { label: 'Protein', value: totalProtein, goal: settings.proteinGoal, color: 'var(--macro-protein)' },
+            { label: 'Carbs',   value: totalCarbs,   goal: settings.carbsGoal,   color: 'var(--macro-carbs)' },
+            { label: 'Fat',     value: totalFat,     goal: settings.fatGoal,     color: 'var(--macro-fat)' },
+            { label: 'Fiber',   value: totalFiber,   goal: settings.fiberGoal,  color: 'var(--macro-fiber)' },
           ].map(({ label, value, goal, color }) => {
             const rounded = Math.round(value * 10) / 10
             const pct = goal ? Math.min((value / goal) * 100, 100) : null
@@ -229,7 +229,7 @@ function HomePage() {
               <div key={label} className="flex flex-col rounded-xl bg-[var(--chip-bg)] px-2 py-2">
                 <span className="text-sm font-bold text-[var(--sea-ink)]">{rounded}g</span>
                 {goal ? (
-                  <span className="text-[9px] leading-tight" style={{ color: isOver ? '#ef4444' : 'var(--sea-ink-soft)' }}>
+                  <span className="text-[9px] leading-tight" style={{ color: isOver ? 'var(--macro-over)' : 'var(--sea-ink-soft)' }}>
                     / {goal}g {label}
                   </span>
                 ) : (
@@ -239,7 +239,7 @@ function HomePage() {
                   <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-[var(--line)]">
                     <div
                       className="h-full rounded-full transition-all duration-500"
-                      style={{ width: `${pct}%`, backgroundColor: isOver ? '#ef4444' : color }}
+                      style={{ width: `${pct}%`, backgroundColor: isOver ? 'var(--macro-over)' : color }}
                     />
                   </div>
                 )}

@@ -7,6 +7,13 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  /* Macro nutrient data colors — shared across charts and stat cards */
+  --macro-protein: #6366f1;
+  --macro-carbs: #d97706;
+  --macro-fat: #e11d48;
+  --macro-fiber: #16a34a;
+  --macro-over: #ef4444;
+
   --sea-ink: #173a40;
   --sea-ink-soft: #416166;
   --lagoon: #4fb8b2;

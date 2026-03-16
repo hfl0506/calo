@@ -29,7 +29,7 @@ function mealFoodsToAnalyzed(foods: MealDetail['foods']): AnalyzedFood[] {
     protein: parseNutritionValue(f.protein),
     carbs: parseNutritionValue(f.carbs),
     fat: parseNutritionValue(f.fat),
-    fiber: 0,
+    fiber: parseNutritionValue(f.fiber),
   }))
 }
 

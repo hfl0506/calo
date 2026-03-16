@@ -13,10 +13,10 @@ type Metric = "calories" | "protein" | "carbs" | "fat";
 type MetricConfig = { key: Metric; label: string; unit: string; color: string; selectedColor: string };
 
 const METRICS_CONFIG: Record<Metric, MetricConfig> = {
-  calories: { key: "calories", label: "Cal",     unit: "kcal", color: "var(--lagoon)", selectedColor: "var(--lagoon-deep)" },
-  protein:  { key: "protein",  label: "Protein", unit: "g",    color: "#818cf8",       selectedColor: "#6366f1" },
-  carbs:    { key: "carbs",    label: "Carbs",   unit: "g",    color: "#fbbf24",       selectedColor: "#d97706" },
-  fat:      { key: "fat",      label: "Fat",     unit: "g",    color: "#fb7185",       selectedColor: "#e11d48" },
+  calories: { key: "calories", label: "Cal",     unit: "kcal", color: "var(--lagoon)",        selectedColor: "var(--lagoon-deep)" },
+  protein:  { key: "protein",  label: "Protein", unit: "g",    color: "#818cf8",              selectedColor: "var(--macro-protein)" },
+  carbs:    { key: "carbs",    label: "Carbs",   unit: "g",    color: "#fbbf24",              selectedColor: "var(--macro-carbs)" },
+  fat:      { key: "fat",      label: "Fat",     unit: "g",    color: "#fb7185",              selectedColor: "var(--macro-fat)" },
 };
 
 const METRIC_KEYS: Metric[] = ["calories", "protein", "carbs", "fat"];

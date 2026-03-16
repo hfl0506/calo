@@ -249,7 +249,7 @@ export const getMealsByDateFn = createServerFn({ method: "GET" })
         mealFoods: true,
       },
       orderBy: (meals, { desc }) => [desc(meals.loggedAt)],
-      limit: 50, // hard cap: >50 meals/day is unlikely; increase if needed
+      limit: 200,
     });
 
     const result: Meal[] = mealRows.map(({ mealFoods, ...meal }) => ({
@@ -284,7 +284,7 @@ export const getMealsRangeFn = createServerFn({ method: "GET" })
       ),
       with: { mealFoods: true },
       orderBy: (meals, { desc }) => [desc(meals.loggedAt)],
-      limit: 200, // hard cap for range queries; may silently truncate dense periods
+      limit: 2000,
     });
 
     const result: Meal[] = mealRows.map(({ mealFoods, ...meal }) => ({
