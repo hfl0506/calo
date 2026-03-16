@@ -1,6 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
-import { eq, and, gte, lt, desc } from 'drizzle-orm'
+import { eq, and, gte, lt } from 'drizzle-orm'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import pRetry from 'p-retry'
@@ -338,6 +338,7 @@ export const getMealsByDateFn = createServerFn({ method: 'GET' })
         mealFoods: true,
       },
       orderBy: (meals, { desc }) => [desc(meals.loggedAt)],
+      limit: 50,
     })
 
     return mealRows.map(({ mealFoods, ...meal }) => ({
@@ -428,15 +429,14 @@ export const updateMealFn = createServerFn({ method: 'POST' })
     const session = await getSession()
     if (!session) throw new Error('Unauthorized')
 
-    const meal = await db.query.meals.findFirst({
-      where: and(eq(meals.id, data.mealId), eq(meals.userId, session.user.id)),
-    })
-    if (!meal) throw new Error('Meal not found')
-
     await db.transaction(async (tx) => {
-      await tx.update(meals)
+      // UPDATE ... RETURNING verifies ownership and updates in one query
+      const updated = await tx.update(meals)
         .set({ notes: data.notes ?? null })
         .where(and(eq(meals.id, data.mealId), eq(meals.userId, session.user.id)))
+        .returning({ id: meals.id })
+
+      if (!updated.length) throw new Error('Meal not found')
 
       await tx.delete(mealFoods).where(eq(mealFoods.mealId, data.mealId))
 
@@ -478,7 +478,7 @@ export const getStreakFn = createServerFn({ method: 'GET' })
       .select({ loggedAt: meals.loggedAt })
       .from(meals)
       .where(and(eq(meals.userId, session.user.id), gte(meals.loggedAt, cutoff)))
-      .orderBy(desc(meals.loggedAt))
+      .limit(2000) // safety cap: ~5 meals/day × 365 days
 
     const datesWithMeals = new Set<string>()
     for (const row of rows) {
@@ -514,16 +514,16 @@ export const deleteMealFn = createServerFn({ method: 'POST' })
     const session = await getSession()
     if (!session) throw new Error('Unauthorized')
 
-    const meal = await db.query.meals.findFirst({
-      where: and(eq(meals.id, data.mealId), eq(meals.userId, session.user.id)),
-    })
+    // DELETE ... RETURNING combines ownership check + delete into one round-trip
+    const [deleted] = await db
+      .delete(meals)
+      .where(and(eq(meals.id, data.mealId), eq(meals.userId, session.user.id)))
+      .returning({ imageUrl: meals.imageUrl })
 
-    if (!meal) throw new Error('Meal not found')
+    if (!deleted) throw new Error('Meal not found')
 
-    await db.delete(meals).where(and(eq(meals.id, data.mealId), eq(meals.userId, session.user.id)))
-
-    if (meal.imageUrl && process.env.R2_PUBLIC_URL) {
-      const key = meal.imageUrl.replace(`${process.env.R2_PUBLIC_URL}/`, '')
+    if (deleted.imageUrl && process.env.R2_PUBLIC_URL) {
+      const key = deleted.imageUrl.replace(`${process.env.R2_PUBLIC_URL}/`, '')
       try {
         const r2 = getR2Client()
         await r2.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET_NAME!, Key: key }))
