@@ -10,13 +10,16 @@ import { getMealUploadUrlFn } from '#/lib/server/upload'
 import { getUserSettingsFn } from '#/lib/server/settings'
 import { useRecentFoods, saveRecentFoods, recentFoodToAnalyzed } from '#/lib/recent-foods'
 import type { AnalyzedFood, MealTag } from '#/lib/types'
+import type { ImageMimeType } from '#/components/log/ImagePicker'
 import { generateId } from '#/lib/uuid'
+import { RouteErrorBoundary } from '#/components/RouteErrorBoundary'
 
 const withIds = (foods: AnalyzedFood[]): AnalyzedFood[] =>
   foods.map((f) => ({ ...f, id: f.id ?? generateId() }))
 
 export const Route = createFileRoute('/_authenticated/log')({
   component: LogMealPage,
+  errorComponent: ({ error, reset }) => <RouteErrorBoundary error={error} reset={reset} />,
 })
 
 type Step = 'pick' | 'analyzing' | 'review'
@@ -27,8 +30,8 @@ function LogMealPage() {
   const [foods, setFoods] = useState<AnalyzedFood[]>([])
   const [tag, setTag] = useState<MealTag>('lunch')
   const [error, setError] = useState<string | null>(null)
-  const [retryData, setRetryData] = useState<{ base64: string; mimeType: string } | null>(null)
-  const [imageData, setImageData] = useState<{ base64: string; mimeType: string } | null>(null)
+  const [retryData, setRetryData] = useState<{ base64: string; mimeType: ImageMimeType } | null>(null)
+  const [imageData, setImageData] = useState<{ base64: string; mimeType: ImageMimeType } | null>(null)
   const recentFoods = useRecentFoods()
   const [notes, setNotes] = useState('')
   const [loggedAt, setLoggedAt] = useState('')
@@ -44,7 +47,7 @@ function LogMealPage() {
     })
   }, [])
 
-  const handleImage = async (base64: string, mimeType: string) => {
+  const handleImage = async (base64: string, mimeType: ImageMimeType) => {
     setRetryData({ base64, mimeType })
     setImageData({ base64, mimeType })
     setError(null)
@@ -52,7 +55,7 @@ function LogMealPage() {
 
     try {
       const result = await analyzeImageFn({
-        data: { imageBase64: base64, mimeType: mimeType as 'image/jpeg' | 'image/png' | 'image/webp' },
+        data: { imageBase64: base64, mimeType },
       })
 
       if (result.error && result.foods.length === 0) {
@@ -129,12 +132,12 @@ function LogMealPage() {
     }
   }
 
-  const uploadImageToR2 = async (base64: string, mimeType: string): Promise<string | null> => {
+  const uploadImageToR2 = async (base64: string, mimeType: ImageMimeType): Promise<string | null> => {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
     const date = new Date().toLocaleDateString('en-CA', { timeZone: tz })
     const fileName = `meal_${generateId()}`
     const { presignedUrl, publicUrl } = await getMealUploadUrlFn({
-      data: { fileName, contentType: mimeType as 'image/jpeg' | 'image/png' | 'image/webp', date },
+      data: { fileName, contentType: mimeType, date },
     })
 
     const binary = atob(base64)

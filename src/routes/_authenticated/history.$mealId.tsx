@@ -11,9 +11,11 @@ import { formatDateTime } from '#/lib/format'
 import { parseNutritionValue, roundMacro } from '#/lib/nutrition'
 import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
 import type { AnalyzedFood } from '#/lib/types'
+import { RouteErrorBoundary } from '#/components/RouteErrorBoundary'
 
 export const Route = createFileRoute('/_authenticated/history/$mealId')({
   component: MealDetailPage,
+  errorComponent: ({ error, reset }) => <RouteErrorBoundary error={error} reset={reset} />,
 })
 
 type MealDetail = Awaited<ReturnType<typeof getMealDetailFn>>

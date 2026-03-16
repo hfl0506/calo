@@ -9,9 +9,11 @@ import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
 import { CalorieTrendChart } from '#/components/CalorieTrendChart'
 import type { Meal } from '#/lib/types'
 import { groupMealsByDate } from '#/lib/meal-utils'
+import { RouteErrorBoundary } from '#/components/RouteErrorBoundary'
 
 export const Route = createFileRoute('/_authenticated/history/')({
   component: HistoryPage,
+  errorComponent: ({ error, reset }) => <RouteErrorBoundary error={error} reset={reset} />,
 })
 
 

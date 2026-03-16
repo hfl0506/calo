@@ -10,42 +10,17 @@ type Period = "7d" | "14d" | "30d" | "custom";
 const PERIODS: Period[] = ["7d", "14d", "30d", "custom"];
 type Metric = "calories" | "protein" | "carbs" | "fat";
 
-const METRICS: {
-  key: Metric;
-  label: string;
-  unit: string;
-  color: string;
-  selectedColor: string;
-}[] = [
-  {
-    key: "calories",
-    label: "Cal",
-    unit: "kcal",
-    color: "var(--lagoon)",
-    selectedColor: "var(--lagoon-deep)",
-  },
-  {
-    key: "protein",
-    label: "Protein",
-    unit: "g",
-    color: "#818cf8",
-    selectedColor: "#6366f1",
-  },
-  {
-    key: "carbs",
-    label: "Carbs",
-    unit: "g",
-    color: "#fbbf24",
-    selectedColor: "#d97706",
-  },
-  {
-    key: "fat",
-    label: "Fat",
-    unit: "g",
-    color: "#fb7185",
-    selectedColor: "#e11d48",
-  },
-];
+type MetricConfig = { key: Metric; label: string; unit: string; color: string; selectedColor: string };
+
+const METRICS_CONFIG: Record<Metric, MetricConfig> = {
+  calories: { key: "calories", label: "Cal",     unit: "kcal", color: "var(--lagoon)", selectedColor: "var(--lagoon-deep)" },
+  protein:  { key: "protein",  label: "Protein", unit: "g",    color: "#818cf8",       selectedColor: "#6366f1" },
+  carbs:    { key: "carbs",    label: "Carbs",   unit: "g",    color: "#fbbf24",       selectedColor: "#d97706" },
+  fat:      { key: "fat",      label: "Fat",     unit: "g",    color: "#fb7185",       selectedColor: "#e11d48" },
+};
+
+const METRIC_KEYS: Metric[] = ["calories", "protein", "carbs", "fat"];
+const METRICS = METRIC_KEYS.map((key) => METRICS_CONFIG[key]);
 
 function formatDetailDate(dateStr: string): string {
   const d = new Date(dateStr + "T12:00:00");
@@ -153,7 +128,7 @@ export function CalorieTrendChart() {
     void fetchData(customStart, customEnd);
   };
 
-  const activeMetric = useMemo(() => METRICS.find((m) => m.key === metric)!, [metric]);
+  const activeMetric = useMemo(() => METRICS_CONFIG[metric], [metric]);
   const getValue = useMemo(() => (d: DayData) => d[metric], [metric]);
   const daysWithData = useMemo(() => days.filter((d) => getValue(d) > 0), [days, getValue]);
   const avg = useMemo(() =>

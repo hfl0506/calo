@@ -6,9 +6,11 @@ import { clearPrefetchCache } from '#/lib/meal-prefetch-cache'
 import { getUserSettingsFn, updateUserSettingsFn } from '#/lib/server/settings'
 import { SettingsSkeleton } from '#/components/SkeletonCard'
 import { useRecentFoods, removeRecentFood, clearRecentFoods } from '#/lib/recent-foods'
+import { RouteErrorBoundary } from '#/components/RouteErrorBoundary'
 
 export const Route = createFileRoute('/_authenticated/settings')({
   component: SettingsPage,
+  errorComponent: ({ error, reset }) => <RouteErrorBoundary error={error} reset={reset} />,
 })
 
 interface GoalInputProps {

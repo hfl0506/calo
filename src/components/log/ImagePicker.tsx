@@ -1,14 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 
+export type ImageMimeType = 'image/jpeg' | 'image/png' | 'image/webp'
+
 interface ImagePickerProps {
-  onImage: (base64: string, mimeType: string) => void
+  onImage: (base64: string, mimeType: ImageMimeType) => void
   onPrompt: (prompt: string) => void
 }
 
-function compressImage(file: File): Promise<{ base64: string; mimeType: string }> {
+function compressImage(file: File): Promise<{ base64: string; mimeType: ImageMimeType }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = (e) => {
+      const result = e.target?.result
+      if (typeof result !== 'string') return
       const img = new Image()
       img.onload = () => {
         const canvas = document.createElement('canvas')
@@ -41,7 +45,7 @@ function compressImage(file: File): Promise<{ base64: string; mimeType: string }
         resolve({ base64, mimeType: 'image/webp' })
       }
       img.onerror = () => reject(new Error('Failed to load image'))
-      img.src = e.target?.result as string
+      img.src = result
     }
     reader.onerror = () => reject(new Error('Failed to read file'))
     reader.readAsDataURL(file)

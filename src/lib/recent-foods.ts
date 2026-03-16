@@ -34,13 +34,28 @@ function notifySubscribers() {
 let _cachedRaw: string | null | undefined = undefined
 let _cachedFoods: RecentFood[] = []
 
+function isRecentFood(value: unknown): value is RecentFood {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'name' in value && typeof value.name === 'string' &&
+    'portionDescription' in value && typeof value.portionDescription === 'string' &&
+    'calories' in value && typeof value.calories === 'number' &&
+    'protein' in value && typeof value.protein === 'number' &&
+    'carbs' in value && typeof value.carbs === 'number' &&
+    'fat' in value && typeof value.fat === 'number' &&
+    'fiber' in value && typeof value.fiber === 'number' &&
+    'lastUsed' in value && typeof value.lastUsed === 'number'
+  )
+}
+
 export function getRecentFoods(): RecentFood[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw === _cachedRaw) return _cachedFoods
     _cachedRaw = raw
     const parsed: unknown = raw ? JSON.parse(raw) : null
-    _cachedFoods = Array.isArray(parsed) ? (parsed as RecentFood[]) : []
+    _cachedFoods = Array.isArray(parsed) ? parsed.filter(isRecentFood) : []
     return _cachedFoods
   } catch {
     return _cachedFoods

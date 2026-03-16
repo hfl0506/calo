@@ -2,9 +2,11 @@ import { Link, Outlet, createFileRoute, useNavigate } from "@tanstack/react-rout
 import { useEffect } from "react";
 import BottomNav from "../components/BottomNav";
 import { authClient } from "#/lib/auth-client";
+import { RouteErrorBoundary } from "#/components/RouteErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
+  errorComponent: ({ error, reset }) => <RouteErrorBoundary error={error} reset={reset} />,
 });
 
 function AuthenticatedLayout() {

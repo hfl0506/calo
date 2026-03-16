@@ -1,9 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { eq, and, gte, lt } from "drizzle-orm";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
-import pRetry from "p-retry";
 import { z } from "zod";
 import { db } from "#/db";
 import { meals, mealFoods } from "#/db/schema";
@@ -14,17 +12,22 @@ import {
   analyzeRateLimiter,
   recalculateRateLimiter,
 } from "#/lib/server/rate-limit";
+import { RateLimiterRes } from "rate-limiter-flexible";
+import {
+  generateAndParse,
+  generateAndParseWithNotFoodGuard,
+} from "#/lib/server/gemini";
 
-function rateLimitMessage(err: unknown): string {
-  const secs = Math.ceil(
-    ((err as { msBeforeNext?: number }).msBeforeNext ?? 60000) / 1000,
-  );
-  return `Too many requests. Please try again in ${secs} second${secs !== 1 ? "s" : ""}.`;
-}
 import type { AnalyzedFood, Meal } from "#/lib/types";
 import { localDateToUTC } from "#/lib/timezone";
 import { env } from "#/lib/env";
 import { ANALYZE_TEXT_PROMPT, ANALYZE_IMAGE_PROMPT, RECALCULATE_PROMPT } from "#/lib/server/prompts";
+
+function rateLimitMessage(err: unknown): string {
+  const ms = err instanceof RateLimiterRes ? err.msBeforeNext : 60000
+  const secs = Math.ceil(ms / 1000)
+  return `Too many requests. Please try again in ${secs} second${secs !== 1 ? "s" : ""}.`
+}
 
 const EMPTY_FOODS: AnalyzedFood[] = [];
 
@@ -32,10 +35,6 @@ const timezoneSchema = z.string().refine(
   (tz) => { try { Intl.DateTimeFormat(undefined, { timeZone: tz }); return true } catch { return false } },
   { message: "Invalid timezone" }
 )
-
-function cleanGeminiJson(raw: string): string {
-  return raw.replace(/```[a-z]*\n?/gi, "").trim()
-}
 
 async function resolveTimezone(fallbackTz?: string): Promise<string> {
   if (fallbackTz) return fallbackTz
@@ -47,9 +46,6 @@ async function resolveTimezone(fallbackTz?: string): Promise<string> {
   } catch { /* client navigation: no server request context */ }
   return Intl.DateTimeFormat().resolvedOptions().timeZone
 }
-
-const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 // Zod schemas for validating Gemini JSON responses
 const analyzedFoodSchema = z.object({
@@ -87,23 +83,11 @@ export const recalculateNutritionFn = createServerFn({ method: "POST" })
       return { error: rateLimitMessage(err) };
     }
 
-    try {
-      const prompt = RECALCULATE_PROMPT(data.originalName, data.portionDescription ?? "standard serving", data.adjustmentPrompt);
+    const prompt = RECALCULATE_PROMPT(data.originalName, data.portionDescription ?? "standard serving", data.adjustmentPrompt);
 
-      const result = await pRetry(() => geminiModel.generateContent(prompt), {
-        retries: 2,
-        minTimeout: 1000,
-        factor: 2,
-      });
-      const content = result.response.text();
-      const cleaned = cleanGeminiJson(content);
-
-      const parsed = analyzedFoodSchema.safeParse(JSON.parse(cleaned));
-      if (!parsed.success) return { error: "Invalid nutrition data returned" };
-      return { food: parsed.data };
-    } catch {
-      return { error: "Failed to recalculate nutrition" };
-    }
+    const result = await generateAndParse(prompt, analyzedFoodSchema)
+    if (result.isErr()) return { error: "Failed to recalculate nutrition" }
+    return { food: result.value }
   });
 
 export const analyzePromptFn = createServerFn({ method: "POST" })
@@ -118,63 +102,24 @@ export const analyzePromptFn = createServerFn({ method: "POST" })
       return { foods: EMPTY_FOODS, error: rateLimitMessage(err) };
     }
 
-    const { prompt } = data;
+    const result = await generateAndParseWithNotFoodGuard(
+      ANALYZE_TEXT_PROMPT(data.prompt),
+      analyzedFoodsArraySchema,
+    )
 
-    try {
-      const fullPrompt = ANALYZE_TEXT_PROMPT(prompt);
-
-      const result = await pRetry(
-        () => geminiModel.generateContent(fullPrompt),
-        {
-          retries: 2,
-          minTimeout: 1000,
-          factor: 2,
-        },
-      );
-      const content = result.response.text();
-      const cleaned = cleanGeminiJson(content);
-
-      let raw: unknown;
-      try {
-        raw = JSON.parse(cleaned);
-      } catch {
-        return {
-          foods: EMPTY_FOODS,
-          error: "Could not parse nutrition response",
-        };
+    if (result.isErr()) {
+      const err = result.error
+      if (err.type === 'not_food') {
+        return { foods: EMPTY_FOODS, error: "Please describe a food or meal. I can only help with food-related prompts." }
       }
-
-      // Check for guardrail rejection
-      if (
-        raw !== null &&
-        typeof raw === "object" &&
-        !Array.isArray(raw) &&
-        "error" in raw &&
-        raw.error === "NOT_FOOD"
-      ) {
-        return {
-          foods: EMPTY_FOODS,
-          error:
-            "Please describe a food or meal. I can only help with food-related prompts.",
-        };
-      }
-
-      const parsed = analyzedFoodsArraySchema.safeParse(raw);
-      if (!parsed.success || parsed.data.length === 0) {
-        return {
-          foods: EMPTY_FOODS,
-          error:
-            'No food items detected. Try describing what you ate, e.g. "a bowl of rice with grilled chicken".',
-        };
-      }
-
-      return { foods: parsed.data };
-    } catch {
-      return {
-        foods: EMPTY_FOODS,
-        error: "Failed to analyze your description. Please try again.",
-      };
+      return { foods: EMPTY_FOODS, error: "Failed to analyze your description. Please try again." }
     }
+
+    if (result.value.length === 0) {
+      return { foods: EMPTY_FOODS, error: 'No food items detected. Try describing what you ate, e.g. "a bowl of rice with grilled chicken".' }
+    }
+
+    return { foods: result.value }
   });
 
 const analyzeImageSchema = z.object({
@@ -194,49 +139,19 @@ export const analyzeImageFn = createServerFn({ method: "POST" })
       return { foods: EMPTY_FOODS, error: rateLimitMessage(err) };
     }
 
-    const { imageBase64, mimeType } = data;
+    const imagePart = { inlineData: { data: data.imageBase64, mimeType: data.mimeType } }
+    const result = await generateAndParse([ANALYZE_IMAGE_PROMPT, imagePart], analyzedFoodsArraySchema)
 
-    try {
-      const promptText = ANALYZE_IMAGE_PROMPT;
-
-      const imagePart = { inlineData: { data: imageBase64, mimeType } };
-      const result = await pRetry(
-        () => geminiModel.generateContent([promptText, imagePart]),
-        {
-          retries: 2,
-          minTimeout: 1000,
-          factor: 2,
-        },
-      );
-      const content = result.response.text();
-      const cleaned = cleanGeminiJson(content);
-
-      let raw: unknown;
-      try {
-        raw = JSON.parse(cleaned);
-      } catch {
-        return {
-          foods: EMPTY_FOODS,
-          error: "Could not parse nutrition response",
-        };
-      }
-
-      const parsed = analyzedFoodsArraySchema.safeParse(raw);
-      if (!parsed.success || parsed.data.length === 0) {
-        return {
-          foods: EMPTY_FOODS,
-          error: "No food items detected in the image",
-        };
-      }
-
-      return { foods: parsed.data };
-    } catch (err) {
-      console.error("[analyzeImageFn] Gemini error:", err instanceof Error ? err.message : String(err));
-      return {
-        foods: EMPTY_FOODS,
-        error: "Failed to analyze image. Please try again.",
-      };
+    if (result.isErr()) {
+      console.error("[analyzeImageFn] Gemini error:", result.error)
+      return { foods: EMPTY_FOODS, error: "Failed to analyze image. Please try again." }
     }
+
+    if (result.value.length === 0) {
+      return { foods: EMPTY_FOODS, error: "No food items detected in the image" }
+    }
+
+    return { foods: result.value }
   });
 
 const finiteNonNegative = z.number().finite().nonnegative();

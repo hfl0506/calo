@@ -9,6 +9,7 @@ import { HomeSkeleton } from '#/components/SkeletonCard'
 import { formatTime } from '#/lib/format'
 import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
 import type { MealTag } from '#/lib/types'
+import { RouteErrorBoundary } from '#/components/RouteErrorBoundary'
 
 const homeSearchSchema = z.object({
   date: z.string().optional(),
@@ -31,6 +32,7 @@ export const Route = createFileRoute('/_authenticated/')({
   pendingComponent: HomeSkeleton,
   pendingMs: 0,
   component: HomePage,
+  errorComponent: ({ error, reset }) => <RouteErrorBoundary error={error} reset={reset} />,
 })
 
 function getTodayLocal(): string {
@@ -106,14 +108,14 @@ function HomePage() {
 
   const { totalCalories, totalProtein, totalCarbs, totalFat, totalFiber, tagGroups } = useMemo(() => {
     let totalCalories = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0, totalFiber = 0
-    const tagGroups: Record<string, number> = {}
+    const tagGroups = new Map<MealTag, number>()
     for (const m of meals) {
       totalCalories += m.totals.calories
       totalProtein  += m.totals.protein
       totalCarbs    += m.totals.carbs
       totalFat      += m.totals.fat
       totalFiber    += m.totals.fiber
-      tagGroups[m.tag] = (tagGroups[m.tag] ?? 0) + m.totals.calories
+      tagGroups.set(m.tag, (tagGroups.get(m.tag) ?? 0) + m.totals.calories)
     }
     return { totalCalories, totalProtein, totalCarbs, totalFat, totalFiber, tagGroups }
   }, [meals])
@@ -214,14 +216,12 @@ function HomePage() {
 
         {/* Macro totals */}
         <div className="mb-4 grid grid-cols-4 gap-2">
-          {(
-            [
-              { label: 'Protein', value: totalProtein, goal: settings.proteinGoal, color: '#6366f1' },
-              { label: 'Carbs',   value: totalCarbs,   goal: settings.carbsGoal,   color: '#d97706' },
-              { label: 'Fat',     value: totalFat,     goal: settings.fatGoal,     color: '#e11d48' },
-              { label: 'Fiber',   value: totalFiber,   goal: settings.fiberGoal,  color: '#16a34a' },
-            ] as { label: string; value: number; goal: number | null; color: string }[]
-          ).map(({ label, value, goal, color }) => {
+          {[
+            { label: 'Protein', value: totalProtein, goal: settings.proteinGoal, color: '#6366f1' },
+            { label: 'Carbs',   value: totalCarbs,   goal: settings.carbsGoal,   color: '#d97706' },
+            { label: 'Fat',     value: totalFat,     goal: settings.fatGoal,     color: '#e11d48' },
+            { label: 'Fiber',   value: totalFiber,   goal: settings.fiberGoal,  color: '#16a34a' },
+          ].map(({ label, value, goal, color }) => {
             const rounded = Math.round(value * 10) / 10
             const pct = goal ? Math.min((value / goal) * 100, 100) : null
             const isOver = goal !== null && value > goal
@@ -249,9 +249,9 @@ function HomePage() {
         </div>
 
         {/* Per-meal-tag breakdown */}
-        {Object.keys(tagGroups).length > 0 && (
+        {tagGroups.size > 0 && (
           <div className="flex gap-4">
-            {(Object.entries(tagGroups) as [MealTag, number][]).map(([tag, cals]) => (
+            {[...tagGroups.entries()].map(([tag, cals]) => (
               <div key={tag} className="flex flex-col items-center gap-0.5">
                 <span className="text-lg">{MEAL_TAG_EMOJI[tag]}</span>
                 <span className="text-xs font-semibold text-[var(--sea-ink)]">
