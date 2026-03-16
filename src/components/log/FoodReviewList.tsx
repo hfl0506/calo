@@ -1,5 +1,6 @@
 import { memo, useCallback, useRef } from 'react'
 import type { AnalyzedFood } from '#/lib/types'
+import { generateId } from '#/lib/uuid'
 import FoodReviewItem from './FoodReviewItem'
 
 interface FoodReviewListProps {
@@ -24,7 +25,7 @@ export default memo(function FoodReviewList({ foods, onChange }: FoodReviewListP
 
   const handleAddManual = useCallback(() => {
     const emptyFood: AnalyzedFood = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       name: '',
       portionDescription: '',
       calories: 0,

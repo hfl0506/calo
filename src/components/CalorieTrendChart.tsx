@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getMealsRangeFn } from "#/lib/server/meals";
 import { getUserSettingsFn } from "#/lib/server/settings";
 import { TrendChartSkeleton } from "#/components/SkeletonCard";
@@ -152,18 +152,21 @@ export function CalorieTrendChart() {
     void fetchData(customStart, customEnd);
   };
 
-  const activeMetric = METRICS.find((m) => m.key === metric)!;
-  const getValue = (d: DayData) => d[metric];
-  const daysWithData = days.filter((d) => getValue(d) > 0);
-  const avg =
+  const activeMetric = useMemo(() => METRICS.find((m) => m.key === metric)!, [metric]);
+  const getValue = useMemo(() => (d: DayData) => d[metric], [metric]);
+  const daysWithData = useMemo(() => days.filter((d) => getValue(d) > 0), [days, getValue]);
+  const avg = useMemo(() =>
     daysWithData.length > 0
       ? Math.round(
-          (daysWithData.reduce((s, d) => s + getValue(d), 0) /
-            daysWithData.length) *
-            10,
+          (daysWithData.reduce((s, d) => s + getValue(d), 0) / daysWithData.length) * 10,
         ) / 10
-      : 0;
-  const selectedDay = selectedIdx !== null ? (days[selectedIdx] ?? null) : null;
+      : 0,
+    [daysWithData, getValue]
+  );
+  const selectedDay = useMemo(
+    () => selectedIdx !== null ? (days[selectedIdx] ?? null) : null,
+    [days, selectedIdx]
+  );
 
   return (
     <div className="space-y-3">

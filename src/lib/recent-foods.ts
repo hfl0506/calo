@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import type { AnalyzedFood } from '#/lib/types'
+import { generateId } from '#/lib/uuid'
 
 const STORAGE_KEY = 'recent_foods'
 const MAX_ITEMS = 12
@@ -107,7 +108,7 @@ export function useRecentFoods(): RecentFood[] {
 
 export function recentFoodToAnalyzed(f: RecentFood): AnalyzedFood {
   return {
-    id: crypto.randomUUID(),
+    id: generateId(),
     name: f.name,
     portionDescription: f.portionDescription,
     calories: f.calories,

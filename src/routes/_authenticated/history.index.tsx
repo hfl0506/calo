@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { getMealsRangeFn } from '#/lib/server/meals'
 import { prefetchMealDetail } from '#/lib/meal-prefetch-cache'
 import { HistorySkeleton } from '#/components/SkeletonCard'
@@ -8,6 +8,7 @@ import { roundMacro } from '#/lib/nutrition'
 import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
 import { CalorieTrendChart } from '#/components/CalorieTrendChart'
 import type { Meal } from '#/lib/types'
+import { groupMealsByDate } from '#/lib/meal-utils'
 
 export const Route = createFileRoute('/_authenticated/history/')({
   component: HistoryPage,
@@ -24,6 +25,7 @@ function HistoryPage() {
   const [hasMore, setHasMore] = useState(true)
   const [oldestDate, setOldestDate] = useState<string | null>(null)
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set())
+  const [loadMoreError, setLoadMoreError] = useState(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const isLoadingMoreRef = useRef(false)
   const consecutiveEmptyRef = useRef(0)
@@ -38,12 +40,7 @@ function HistoryPage() {
 
     const allMeals = await getMealsRangeFn({ data: { startDate, endDate, timezone: tz } })
 
-    const grouped: Record<string, Meal[]> = {}
-    for (const meal of allMeals) {
-      const dateStr = new Date(meal.loggedAt!).toLocaleDateString('en-CA', { timeZone: tz })
-      if (!grouped[dateStr]) grouped[dateStr] = []
-      grouped[dateStr].push(meal)
-    }
+    const grouped = groupMealsByDate(allMeals, tz)
 
     setMealsByDate((prev) => append ? { ...prev, ...grouped } : grouped)
     setOldestDate(startDate)
@@ -70,7 +67,7 @@ function HistoryPage() {
     fetchRange(today, false).finally(() => setIsLoading(false))
   }, [])
 
-  const handleLoadMore = async () => {
+  const handleLoadMore = useCallback(async () => {
     if (!oldestDate || isLoadingMoreRef.current) return
     isLoadingMoreRef.current = true
     setIsLoadingMore(true)
@@ -80,12 +77,13 @@ function HistoryPage() {
       const newEnd = prev.toLocaleDateString('en-CA', { timeZone: tz })
       await fetchRange(newEnd, true)
     } catch {
-      setHasMore(false) // stop retrying on error
+      setLoadMoreError(true)
+      setHasMore(false)
     } finally {
       isLoadingMoreRef.current = false
       setIsLoadingMore(false)
     }
-  }
+  }, [oldestDate, tz])
 
   useEffect(() => {
     const sentinel = sentinelRef.current
@@ -100,7 +98,7 @@ function HistoryPage() {
 
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [oldestDate, hasMore])
+  }, [handleLoadMore, hasMore])
 
   const sortedDates = Object.keys(mealsByDate).sort((a, b) => b.localeCompare(a))
 
@@ -296,7 +294,7 @@ function HistoryPage() {
 
           {!hasMore && (
             <p className="py-6 text-center text-sm text-[var(--sea-ink-soft)]">
-              You've reached the beginning of your history
+              {loadMoreError ? 'Failed to load more history.' : "You've reached the beginning of your history"}
             </p>
           )}
         </div>

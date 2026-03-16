@@ -9,10 +9,11 @@ import { analyzeImageFn, analyzePromptFn, recalculateNutritionFn, saveMealFn } f
 import { getMealUploadUrlFn } from '#/lib/server/upload'
 import { getUserSettingsFn } from '#/lib/server/settings'
 import { useRecentFoods, saveRecentFoods, recentFoodToAnalyzed } from '#/lib/recent-foods'
-import type { AnalyzedFood } from '#/lib/types'
+import type { AnalyzedFood, MealTag } from '#/lib/types'
+import { generateId } from '#/lib/uuid'
 
 const withIds = (foods: AnalyzedFood[]): AnalyzedFood[] =>
-  foods.map((f) => ({ ...f, id: f.id ?? crypto.randomUUID() }))
+  foods.map((f) => ({ ...f, id: f.id ?? generateId() }))
 
 export const Route = createFileRoute('/_authenticated/log')({
   component: LogMealPage,
@@ -24,7 +25,7 @@ function LogMealPage() {
   const navigate = useNavigate()
   const [step, setStep] = useState<Step>('pick')
   const [foods, setFoods] = useState<AnalyzedFood[]>([])
-  const [tag, setTag] = useState<string>('lunch')
+  const [tag, setTag] = useState<MealTag>('lunch')
   const [error, setError] = useState<string | null>(null)
   const [retryData, setRetryData] = useState<{ base64: string; mimeType: string } | null>(null)
   const [imageData, setImageData] = useState<{ base64: string; mimeType: string } | null>(null)
@@ -38,7 +39,9 @@ function LogMealPage() {
 
   // Fetch daily goal once so we can warn if the review total exceeds it
   useEffect(() => {
-    getUserSettingsFn().then((s) => setDailyGoal(s.dailyCalorieGoal)).catch(() => {})
+    getUserSettingsFn().then((s) => setDailyGoal(s.dailyCalorieGoal)).catch((err) => {
+      console.warn('[log] Failed to fetch daily goal:', err)
+    })
   }, [])
 
   const handleImage = async (base64: string, mimeType: string) => {
@@ -129,7 +132,7 @@ function LogMealPage() {
   const uploadImageToR2 = async (base64: string, mimeType: string): Promise<string | null> => {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
     const date = new Date().toLocaleDateString('en-CA', { timeZone: tz })
-    const fileName = `meal_${crypto.randomUUID()}`
+    const fileName = `meal_${generateId()}`
     const { presignedUrl, publicUrl } = await getMealUploadUrlFn({
       data: { fileName, contentType: mimeType as 'image/jpeg' | 'image/png' | 'image/webp', date },
     })
@@ -189,7 +192,7 @@ function LogMealPage() {
 
       await saveMealFn({
         data: {
-          tag: tag as 'breakfast' | 'lunch' | 'dinner' | 'snacks',
+          tag,
           foods: savedFoods,
           imageUrl,
           notes: notes.trim() || undefined,

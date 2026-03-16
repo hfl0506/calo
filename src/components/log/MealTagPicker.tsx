@@ -1,6 +1,8 @@
+import type { MealTag } from '#/lib/types'
+
 interface MealTagPickerProps {
-  value: string
-  onChange: (tag: string) => void
+  value: MealTag
+  onChange: (tag: MealTag) => void
 }
 
 const TAGS = [

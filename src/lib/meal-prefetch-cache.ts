@@ -58,6 +58,6 @@ export function prefetchMealDetail(mealId: string): void {
       if (cache.size >= MAX_SIZE) evictOldest()
       cache.set(mealId, { data, fetchedAt: Date.now() })
     })
-    .catch(() => { /* best-effort */ })
+    .catch((err) => { console.warn('[prefetch] failed for', mealId, err) })
     .finally(() => inflight.delete(mealId))
 }
