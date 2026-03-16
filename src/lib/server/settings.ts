@@ -19,6 +19,7 @@ export const getUserSettingsFn = createServerFn({ method: 'GET' })
       proteinGoal: row?.proteinGoal ?? null,
       carbsGoal: row?.carbsGoal ?? null,
       fatGoal: row?.fatGoal ?? null,
+      fiberGoal: row?.fiberGoal ?? null,
     }
   })
 
@@ -27,6 +28,7 @@ const updateSettingsSchema = z.object({
   proteinGoal: z.number().int().min(0).max(1000).nullable().optional(),
   carbsGoal: z.number().int().min(0).max(2000).nullable().optional(),
   fatGoal: z.number().int().min(0).max(1000).nullable().optional(),
+  fiberGoal: z.number().int().min(0).max(500).nullable().optional(),
 })
 
 export const updateUserSettingsFn = createServerFn({ method: 'POST' })
@@ -43,16 +45,18 @@ export const updateUserSettingsFn = createServerFn({ method: 'POST' })
         proteinGoal: data.proteinGoal ?? null,
         carbsGoal: data.carbsGoal ?? null,
         fatGoal: data.fatGoal ?? null,
+        fiberGoal: data.fiberGoal ?? null,
       })
       .onConflictDoUpdate({
         target: userSettings.userId,
         set: {
-        dailyCalorieGoal: data.dailyCalorieGoal,
-        proteinGoal: data.proteinGoal ?? null,
-        carbsGoal: data.carbsGoal ?? null,
-        fatGoal: data.fatGoal ?? null,
-        updatedAt: sql`now()`,
-      },
+          dailyCalorieGoal: data.dailyCalorieGoal,
+          proteinGoal: data.proteinGoal ?? null,
+          carbsGoal: data.carbsGoal ?? null,
+          fatGoal: data.fatGoal ?? null,
+          fiberGoal: data.fiberGoal ?? null,
+          updatedAt: sql`now()`,
+        },
       })
 
     return { success: true }

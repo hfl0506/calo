@@ -4,6 +4,7 @@ import ThemeToggle from '#/components/ThemeToggle'
 import { authClient } from '#/lib/auth-client'
 import { clearPrefetchCache } from '#/lib/meal-prefetch-cache'
 import { getUserSettingsFn, updateUserSettingsFn } from '#/lib/server/settings'
+import { SettingsSkeleton } from '#/components/SkeletonCard'
 
 export const Route = createFileRoute('/_authenticated/settings')({
   component: SettingsPage,
@@ -69,7 +70,8 @@ function SettingsPage() {
   const [proteinGoal, setProteinGoal] = useState<number | null>(null)
   const [carbsGoal, setCarbsGoal] = useState<number | null>(null)
   const [fatGoal, setFatGoal] = useState<number | null>(null)
-  const [savedMacros, setSavedMacros] = useState<{ p: number | null; c: number | null; f: number | null }>({ p: null, c: null, f: null })
+  const [fiberGoal, setFiberGoal] = useState<number | null>(null)
+  const [savedMacros, setSavedMacros] = useState<{ p: number | null; c: number | null; f: number | null; fi: number | null }>({ p: null, c: null, f: null, fi: null })
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -83,7 +85,8 @@ function SettingsPage() {
         setProteinGoal(data.proteinGoal)
         setCarbsGoal(data.carbsGoal)
         setFatGoal(data.fatGoal)
-        setSavedMacros({ p: data.proteinGoal, c: data.carbsGoal, f: data.fatGoal })
+        setFiberGoal(data.fiberGoal)
+        setSavedMacros({ p: data.proteinGoal, c: data.carbsGoal, f: data.fatGoal, fi: data.fiberGoal })
       })
       .catch(console.error)
       .finally(() => setIsLoading(false))
@@ -93,13 +96,15 @@ function SettingsPage() {
     dailyGoal !== savedDailyGoal ||
     proteinGoal !== savedMacros.p ||
     carbsGoal !== savedMacros.c ||
-    fatGoal !== savedMacros.f
+    fatGoal !== savedMacros.f ||
+    fiberGoal !== savedMacros.fi
 
   const isCalInvalid = dailyGoal < 500 || dailyGoal > 10000
   const isMacroInvalid =
     (proteinGoal !== null && (proteinGoal < 0 || proteinGoal > 1000)) ||
     (carbsGoal !== null && (carbsGoal < 0 || carbsGoal > 2000)) ||
-    (fatGoal !== null && (fatGoal < 0 || fatGoal > 1000))
+    (fatGoal !== null && (fatGoal < 0 || fatGoal > 1000)) ||
+    (fiberGoal !== null && (fiberGoal < 0 || fiberGoal > 500))
 
   const handleSave = async () => {
     if (!isDirty || isSaving || isCalInvalid || isMacroInvalid) return
@@ -112,10 +117,11 @@ function SettingsPage() {
           proteinGoal: proteinGoal ?? null,
           carbsGoal: carbsGoal ?? null,
           fatGoal: fatGoal ?? null,
+          fiberGoal: fiberGoal ?? null,
         },
       })
       setSavedDailyGoal(dailyGoal)
-      setSavedMacros({ p: proteinGoal, c: carbsGoal, f: fatGoal })
+      setSavedMacros({ p: proteinGoal, c: carbsGoal, f: fatGoal, fi: fiberGoal })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch {
@@ -140,9 +146,7 @@ function SettingsPage() {
           </p>
 
           {isLoading ? (
-            <div className="flex justify-center py-4">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent" />
-            </div>
+            <SettingsSkeleton />
           ) : (
             <div className="space-y-3">
               {/* Calorie goal */}
@@ -168,6 +172,7 @@ function SettingsPage() {
               <GoalInput label="Protein" unit="g" value={proteinGoal} min={0} max={1000} onChange={setProteinGoal} />
               <GoalInput label="Carbs" unit="g" value={carbsGoal} min={0} max={2000} onChange={setCarbsGoal} />
               <GoalInput label="Fat" unit="g" value={fatGoal} min={0} max={1000} onChange={setFatGoal} />
+              <GoalInput label="Fiber" unit="g" value={fiberGoal} min={0} max={500} onChange={setFiberGoal} />
 
               <div className="pt-1">
                 <button

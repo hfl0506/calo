@@ -61,6 +61,7 @@ export const userSettings = pgTable('user_settings', {
   proteinGoal: integer('protein_goal'),
   carbsGoal: integer('carbs_goal'),
   fatGoal: integer('fat_goal'),
+  fiberGoal: integer('fiber_goal'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 })

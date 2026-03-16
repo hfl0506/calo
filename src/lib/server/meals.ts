@@ -1,6 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
-import { eq, and, gte, lt } from 'drizzle-orm'
+import { eq, and, gte, lt, desc } from 'drizzle-orm'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import pRetry from 'p-retry'
@@ -490,6 +490,53 @@ export const updateMealFn = createServerFn({ method: 'POST' })
     })
 
     return { success: true }
+  })
+
+export const getStreakFn = createServerFn({ method: 'GET' })
+  .handler(async () => {
+    const session = await getSession()
+    if (!session) throw new Error('Unauthorized')
+
+    let tz = 'UTC'
+    try {
+      const req = getRequest()
+      const cookieHeader = req.headers.get('cookie') ?? ''
+      const tzCookie = cookieHeader.split(';').map((c) => c.trim()).find((c) => c.startsWith('tz='))
+      if (tzCookie) tz = decodeURIComponent(tzCookie.slice(3))
+    } catch { /* client-side */ }
+
+    // Look back up to 365 days
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - 365)
+
+    const rows = await db
+      .select({ loggedAt: meals.loggedAt })
+      .from(meals)
+      .where(and(eq(meals.userId, session.user.id), gte(meals.loggedAt, cutoff)))
+      .orderBy(desc(meals.loggedAt))
+
+    const datesWithMeals = new Set<string>()
+    for (const row of rows) {
+      if (row.loggedAt) {
+        datesWithMeals.add(new Date(row.loggedAt).toLocaleDateString('en-CA', { timeZone: tz }))
+      }
+    }
+
+    let streak = 0
+    const cur = new Date()
+    // If today has no meals, start checking from yesterday (streak can still be alive)
+    const today = cur.toLocaleDateString('en-CA', { timeZone: tz })
+    if (!datesWithMeals.has(today)) {
+      cur.setDate(cur.getDate() - 1)
+    }
+    for (let i = 0; i <= 365; i++) {
+      const d = cur.toLocaleDateString('en-CA', { timeZone: tz })
+      if (!datesWithMeals.has(d)) break
+      streak++
+      cur.setDate(cur.getDate() - 1)
+    }
+
+    return { streak }
   })
 
 const deleteMealSchema = z.object({

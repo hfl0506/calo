@@ -30,6 +30,7 @@ function LogMealPage() {
   const [imageData, setImageData] = useState<{ base64: string; mimeType: string } | null>(null)
   const [recentFoods, setRecentFoods] = useState<RecentFood[]>([])
   const [notes, setNotes] = useState('')
+  const [loggedAt, setLoggedAt] = useState('')
   const [adjustmentPrompt, setAdjustmentPrompt] = useState('')
   const [isAdjusting, setIsAdjusting] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -170,12 +171,19 @@ function LogMealPage() {
         imageUrl = url ?? undefined
       }
 
+      // Convert datetime-local value (no tz) to ISO string in user's local timezone
+      let loggedAtISO: string | undefined
+      if (loggedAt) {
+        loggedAtISO = new Date(loggedAt).toISOString()
+      }
+
       await saveMealFn({
         data: {
           tag: tag as 'breakfast' | 'lunch' | 'dinner' | 'snacks',
           foods: savedFoods,
           imageUrl,
           notes: notes.trim() || undefined,
+          loggedAt: loggedAtISO,
         },
       })
 
@@ -273,6 +281,20 @@ function LogMealPage() {
             <div className="space-y-1">
               <h2 className="px-1 text-sm font-semibold text-[var(--sea-ink)]">Meal type</h2>
               <MealTagPicker value={tag} onChange={setTag} />
+            </div>
+
+            {/* Date & Time */}
+            <div className="space-y-1">
+              <h2 className="px-1 text-sm font-semibold text-[var(--sea-ink)]">
+                Date & Time <span className="font-normal text-[var(--sea-ink-soft)]">(defaults to now)</span>
+              </h2>
+              <input
+                type="datetime-local"
+                value={loggedAt}
+                onChange={(e) => setLoggedAt(e.target.value)}
+                max={new Date().toISOString().slice(0, 16)}
+                className="w-full rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] px-3 py-2 text-sm text-[var(--sea-ink)] outline-none transition focus:border-[var(--lagoon-deep)]"
+              />
             </div>
 
             {/* Notes */}

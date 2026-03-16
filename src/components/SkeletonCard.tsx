@@ -135,6 +135,63 @@ export function MealDetailSkeleton() {
   )
 }
 
+export function TrendChartSkeleton() {
+  return (
+    <Themed>
+      <div className="space-y-3">
+        {/* Chart card */}
+        <div className="island-shell rounded-2xl px-3 pb-3 pt-4 space-y-3">
+          <div className="flex items-baseline justify-between px-1">
+            <Skeleton width={60} height={12} borderRadius={6} />
+            <Skeleton width={88} height={11} borderRadius={6} />
+          </div>
+          <Skeleton height={134} borderRadius={8} />
+        </div>
+        {/* Detail card */}
+        <div className="island-shell rounded-2xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <Skeleton width={100} height={14} borderRadius={6} />
+            <Skeleton width={80} height={14} borderRadius={6} />
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            <Skeleton height={48} borderRadius={8} />
+            <Skeleton height={48} borderRadius={8} />
+            <Skeleton height={48} borderRadius={8} />
+            <Skeleton height={48} borderRadius={8} />
+          </div>
+        </div>
+      </div>
+    </Themed>
+  )
+}
+
+export function SettingsSkeleton() {
+  return (
+    <Themed>
+      <div className="space-y-3">
+        {/* Calories row */}
+        <div className="flex items-center gap-3">
+          <Skeleton width={64} height={13} borderRadius={6} />
+          <Skeleton width={96} height={40} borderRadius={12} />
+          <Skeleton width={32} height={13} borderRadius={6} />
+        </div>
+        <div className="my-1 border-t border-[var(--line)]" />
+        {/* Macro rows: Protein, Carbs, Fat, Fiber */}
+        {['p', 'c', 'f', 'fi'].map((k) => (
+          <div key={k} className="flex items-center gap-3">
+            <Skeleton width={64} height={13} borderRadius={6} />
+            <Skeleton width={96} height={40} borderRadius={12} />
+            <Skeleton width={16} height={13} borderRadius={6} />
+          </div>
+        ))}
+        <div className="pt-1">
+          <Skeleton height={40} borderRadius={12} />
+        </div>
+      </div>
+    </Themed>
+  )
+}
+
 export function HistorySkeleton() {
   return (
     <Themed>

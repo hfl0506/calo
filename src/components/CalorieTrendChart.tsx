@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getMealsRangeFn } from '#/lib/server/meals'
 import { getUserSettingsFn } from '#/lib/server/settings'
+import { TrendChartSkeleton } from '#/components/SkeletonCard'
 import type { Meal } from '#/lib/types'
 
 type Period = '7d' | '14d' | '30d' | 'custom'
@@ -333,9 +334,7 @@ export function CalorieTrendChart() {
       </div>
 
       {isLoading ? (
-        <div className="flex h-44 items-center justify-center">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent" />
-        </div>
+        <TrendChartSkeleton />
       ) : fetchError ? (
         <div className="flex h-44 flex-col items-center justify-center gap-2 text-center">
           <p className="text-sm text-red-500">{fetchError}</p>
