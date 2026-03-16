@@ -131,24 +131,37 @@ function HomePage() {
 
         {/* Macro totals */}
         <div className="mb-4 grid grid-cols-3 gap-3">
-          <div className="flex flex-col items-center rounded-xl bg-[var(--chip-bg)] py-2">
-            <span className="text-base font-bold text-[var(--sea-ink)]">
-              {Math.round(totalProtein * 10) / 10}g
-            </span>
-            <span className="text-xs text-[var(--sea-ink-soft)]">Protein</span>
-          </div>
-          <div className="flex flex-col items-center rounded-xl bg-[var(--chip-bg)] py-2">
-            <span className="text-base font-bold text-[var(--sea-ink)]">
-              {Math.round(totalCarbs * 10) / 10}g
-            </span>
-            <span className="text-xs text-[var(--sea-ink-soft)]">Carbs</span>
-          </div>
-          <div className="flex flex-col items-center rounded-xl bg-[var(--chip-bg)] py-2">
-            <span className="text-base font-bold text-[var(--sea-ink)]">
-              {Math.round(totalFat * 10) / 10}g
-            </span>
-            <span className="text-xs text-[var(--sea-ink-soft)]">Fat</span>
-          </div>
+          {(
+            [
+              { label: 'Protein', value: totalProtein, goal: settings.proteinGoal, color: '#6366f1' },
+              { label: 'Carbs',   value: totalCarbs,   goal: settings.carbsGoal,   color: '#d97706' },
+              { label: 'Fat',     value: totalFat,     goal: settings.fatGoal,     color: '#e11d48' },
+            ] as { label: string; value: number; goal: number | null; color: string }[]
+          ).map(({ label, value, goal, color }) => {
+            const rounded = Math.round(value * 10) / 10
+            const pct = goal ? Math.min((value / goal) * 100, 100) : null
+            const isOver = goal !== null && value > goal
+            return (
+              <div key={label} className="flex flex-col rounded-xl bg-[var(--chip-bg)] px-2 py-2">
+                <span className="text-base font-bold text-[var(--sea-ink)]">{rounded}g</span>
+                {goal ? (
+                  <span className="text-[10px]" style={{ color: isOver ? '#ef4444' : 'var(--sea-ink-soft)' }}>
+                    / {goal}g {label}
+                  </span>
+                ) : (
+                  <span className="text-xs text-[var(--sea-ink-soft)]">{label}</span>
+                )}
+                {pct !== null && (
+                  <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-[var(--line)]">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${pct}%`, backgroundColor: isOver ? '#ef4444' : color }}
+                    />
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
 
         {/* Per-meal-tag breakdown */}

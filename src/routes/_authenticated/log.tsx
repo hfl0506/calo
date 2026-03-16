@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import AnalyzingScreen from '#/components/log/AnalyzingScreen'
 import FoodReviewList from '#/components/log/FoodReviewList'
 import ImagePicker from '#/components/log/ImagePicker'
@@ -7,7 +7,9 @@ import MealTagPicker from '#/components/log/MealTagPicker'
 import NutritionSummaryBar from '#/components/log/NutritionSummaryBar'
 import { analyzeImageFn, analyzePromptFn, recalculateNutritionFn, saveMealFn } from '#/lib/server/meals'
 import { getMealUploadUrlFn } from '#/lib/server/upload'
+import { getRecentFoods, saveRecentFoods, recentFoodToAnalyzed } from '#/lib/recent-foods'
 import type { AnalyzedFood } from '#/lib/types'
+import type { RecentFood } from '#/lib/recent-foods'
 
 const withIds = (foods: AnalyzedFood[]): AnalyzedFood[] =>
   foods.map((f) => ({ ...f, id: f.id ?? crypto.randomUUID() }))
@@ -26,10 +28,15 @@ function LogMealPage() {
   const [error, setError] = useState<string | null>(null)
   const [retryData, setRetryData] = useState<{ base64: string; mimeType: string } | null>(null)
   const [imageData, setImageData] = useState<{ base64: string; mimeType: string } | null>(null)
+  const [recentFoods, setRecentFoods] = useState<RecentFood[]>([])
+  const [notes, setNotes] = useState('')
   const [adjustmentPrompt, setAdjustmentPrompt] = useState('')
   const [isAdjusting, setIsAdjusting] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
+  useEffect(() => {
+    setRecentFoods(getRecentFoods())
+  }, [])
 
   const handleImage = async (base64: string, mimeType: string) => {
     setRetryData({ base64, mimeType })
@@ -150,6 +157,9 @@ function LogMealPage() {
     const savedFoods = foods
     const savedImageData = imageData
 
+    // Persist foods to recent list before navigating
+    saveRecentFoods(savedFoods)
+
     // Navigate home immediately — save happens in the background
     await navigate({ to: '/', search: { saving: true } })
 
@@ -165,6 +175,7 @@ function LogMealPage() {
           tag: tag as 'breakfast' | 'lunch' | 'dinner' | 'snacks',
           foods: savedFoods,
           imageUrl,
+          notes: notes.trim() || undefined,
         },
       })
 
@@ -228,6 +239,28 @@ function LogMealPage() {
               onImage={(base64, mimeType) => void handleImage(base64, mimeType)}
               onPrompt={(prompt) => void handlePrompt(prompt)}
             />
+
+            {recentFoods.length > 0 && (
+              <div className="mt-6">
+                <h2 className="mb-2 px-1 text-sm font-semibold text-[var(--sea-ink)]">Recently logged</h2>
+                <div className="flex flex-wrap gap-2">
+                  {recentFoods.map((f) => (
+                    <button
+                      key={f.name}
+                      type="button"
+                      onClick={() => {
+                        setFoods([recentFoodToAnalyzed(f)])
+                        setStep('review')
+                      }}
+                      className="flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--chip-bg)] px-3 py-1.5 text-xs font-medium text-[var(--sea-ink)] transition hover:border-[var(--lagoon-deep)] hover:text-[var(--lagoon-deep)]"
+                    >
+                      <span>{f.name}</span>
+                      <span className="text-[var(--sea-ink-soft)]">{Math.round(f.calories)} kcal</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -240,6 +273,21 @@ function LogMealPage() {
             <div className="space-y-1">
               <h2 className="px-1 text-sm font-semibold text-[var(--sea-ink)]">Meal type</h2>
               <MealTagPicker value={tag} onChange={setTag} />
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-1">
+              <h2 className="px-1 text-sm font-semibold text-[var(--sea-ink)]">
+                Notes <span className="font-normal text-[var(--sea-ink-soft)]">(optional)</span>
+              </h2>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                maxLength={500}
+                rows={2}
+                placeholder="Restaurant name, mood, context…"
+                className="w-full resize-none rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] px-3 py-2 text-sm text-[var(--sea-ink)] outline-none transition focus:border-[var(--lagoon-deep)] placeholder:text-[var(--sea-ink-soft)]"
+              />
             </div>
 
             {/* Central adjustment prompt */}

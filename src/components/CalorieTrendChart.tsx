@@ -186,11 +186,14 @@ export function CalorieTrendChart() {
   const [customEnd, setCustomEnd] = useState(today)
   const [days, setDays] = useState<DayData[]>([])
   const [goal, setGoal] = useState(2000)
+  const [macroGoals, setMacroGoals] = useState<{ protein: number | null; carbs: number | null; fat: number | null }>({ protein: null, carbs: null, fat: null })
   const [isLoading, setIsLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
 
   const fetchData = async (startDate: string, endDate: string) => {
     setIsLoading(true)
+    setFetchError(null)
     try {
       const [meals, settings] = await Promise.all([
         getMealsRangeFn({ data: { startDate, endDate, timezone: tz } }),
@@ -198,6 +201,7 @@ export function CalorieTrendChart() {
       ])
 
       setGoal(settings.dailyCalorieGoal)
+      setMacroGoals({ protein: settings.proteinGoal, carbs: settings.carbsGoal, fat: settings.fatGoal })
 
       const dataMap = new Map<string, DayData>()
       const cur = new Date(startDate + 'T12:00:00')
@@ -222,6 +226,8 @@ export function CalorieTrendChart() {
       const sorted = Array.from(dataMap.values()).sort((a, b) => a.date.localeCompare(b.date))
       setDays(sorted)
       setSelectedIdx(sorted.length - 1)
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : 'Failed to load data')
     } finally {
       setIsLoading(false)
     }
@@ -330,6 +336,30 @@ export function CalorieTrendChart() {
         <div className="flex h-44 items-center justify-center">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent" />
         </div>
+      ) : fetchError ? (
+        <div className="flex h-44 flex-col items-center justify-center gap-2 text-center">
+          <p className="text-sm text-red-500">{fetchError}</p>
+          <button
+            type="button"
+            onClick={() => {
+              if (period === 'custom') {
+                void fetchData(customStart, customEnd)
+              } else {
+                const end = new Date()
+                const dayCount = period === '7d' ? 7 : period === '14d' ? 14 : 30
+                const start = new Date()
+                start.setDate(start.getDate() - (dayCount - 1))
+                void fetchData(
+                  start.toLocaleDateString('en-CA', { timeZone: tz }),
+                  end.toLocaleDateString('en-CA', { timeZone: tz }),
+                )
+              }
+            }}
+            className="text-xs text-[var(--lagoon-deep)] underline"
+          >
+            Retry
+          </button>
+        </div>
       ) : days.length === 0 ? (
         <div className="flex h-44 items-center justify-center">
           <p className="text-sm text-[var(--sea-ink-soft)]">No data for this period</p>
@@ -352,7 +382,7 @@ export function CalorieTrendChart() {
                     {activeMetric.unit}
                   </span>
                 )}
-                {metric === 'calories' && (
+                {(metric === 'calories' || (metric === 'protein' && macroGoals.protein) || (metric === 'carbs' && macroGoals.carbs) || (metric === 'fat' && macroGoals.fat)) && (
                   <div className="flex items-center gap-1">
                     <svg width="16" height="4" viewBox="0 0 16 4">
                       <line x1="0" y1="2" x2="16" y2="2" stroke={activeMetric.selectedColor} strokeWidth="1.5" strokeDasharray="4 3" opacity="0.6" />
@@ -368,7 +398,12 @@ export function CalorieTrendChart() {
               getValue={getValue}
               barColor={activeMetric.color}
               activeColor={activeMetric.selectedColor}
-              goalValue={metric === 'calories' ? goal : undefined}
+              goalValue={
+                metric === 'calories' ? goal
+                : metric === 'protein' ? (macroGoals.protein ?? undefined)
+                : metric === 'carbs' ? (macroGoals.carbs ?? undefined)
+                : (macroGoals.fat ?? undefined)
+              }
               selectedIdx={selectedIdx}
               onSelect={setSelectedIdx}
             />

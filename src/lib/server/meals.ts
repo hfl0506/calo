@@ -288,6 +288,7 @@ const saveMealSchema = z.object({
   ).min(1).max(50),
   loggedAt: z.string().optional(),
   imageUrl: z.string().url().optional(),
+  notes: z.string().max(500).optional(),
 })
 
 export const saveMealFn = createServerFn({ method: 'POST' })
@@ -306,6 +307,7 @@ export const saveMealFn = createServerFn({ method: 'POST' })
           tag: data.tag as MealTag,
           loggedAt,
           imageUrl: data.imageUrl ?? null,
+          notes: data.notes ?? null,
         })
         .returning({ id: meals.id })
 
@@ -437,6 +439,57 @@ export const getMealDetailFn = createServerFn({ method: 'GET' })
       foods: mealFoods,
       totals: calcTotals(mealFoods),
     }
+  })
+
+const updateMealSchema = z.object({
+  mealId: z.string().uuid(),
+  notes: z.string().max(500).optional(),
+  foods: z.array(
+    z.object({
+      name: z.string().min(1).max(200),
+      portionDescription: z.string().max(200).optional(),
+      calories: finiteNonNegative,
+      protein: finiteNonNegative.optional(),
+      carbs: finiteNonNegative.optional(),
+      fat: finiteNonNegative.optional(),
+      fiber: finiteNonNegative.optional(),
+    }),
+  ).min(1).max(50),
+})
+
+export const updateMealFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: unknown) => updateMealSchema.parse(data))
+  .handler(async ({ data }) => {
+    const session = await getSession()
+    if (!session) throw new Error('Unauthorized')
+
+    const meal = await db.query.meals.findFirst({
+      where: and(eq(meals.id, data.mealId), eq(meals.userId, session.user.id)),
+    })
+    if (!meal) throw new Error('Meal not found')
+
+    await db.transaction(async (tx) => {
+      await tx.update(meals)
+        .set({ notes: data.notes ?? null })
+        .where(and(eq(meals.id, data.mealId), eq(meals.userId, session.user.id)))
+
+      await tx.delete(mealFoods).where(eq(mealFoods.mealId, data.mealId))
+
+      await tx.insert(mealFoods).values(
+        data.foods.map((food) => ({
+          mealId: data.mealId,
+          name: food.name,
+          portionDescription: food.portionDescription ?? null,
+          calories: food.calories.toString(),
+          protein: food.protein?.toString() ?? null,
+          carbs: food.carbs?.toString() ?? null,
+          fat: food.fat?.toString() ?? null,
+          fiber: food.fiber?.toString() ?? null,
+        })),
+      )
+    })
+
+    return { success: true }
   })
 
 const deleteMealSchema = z.object({

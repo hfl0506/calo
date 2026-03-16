@@ -58,6 +58,9 @@ export const userSettings = pgTable('user_settings', {
     .unique()
     .references(() => user.id, { onDelete: 'cascade' }),
   dailyCalorieGoal: integer('daily_calorie_goal').notNull().default(2000),
+  proteinGoal: integer('protein_goal'),
+  carbsGoal: integer('carbs_goal'),
+  fatGoal: integer('fat_goal'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 })

@@ -9,9 +9,67 @@ export const Route = createFileRoute('/_authenticated/settings')({
   component: SettingsPage,
 })
 
+interface GoalInputProps {
+  label: string
+  unit: string
+  value: number | null
+  min: number
+  max: number
+  onChange: (v: number | null) => void
+}
+
+function GoalInput({ label, unit, value, min, max, onChange }: GoalInputProps) {
+  const [raw, setRaw] = useState(value !== null ? String(value) : '')
+
+  useEffect(() => {
+    setRaw(value !== null ? String(value) : '')
+  }, [value])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const s = e.target.value
+    setRaw(s)
+    if (s === '') {
+      onChange(null)
+    } else {
+      const n = parseInt(s, 10)
+      if (!Number.isNaN(n)) onChange(n)
+    }
+  }
+
+  const isInvalid = value !== null && (value < min || value > max)
+
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-16 text-sm text-[var(--sea-ink)]">{label}</span>
+      <input
+        type="number"
+        min={min}
+        max={max}
+        step={1}
+        value={raw}
+        placeholder="—"
+        onChange={handleChange}
+        className={`w-24 rounded-xl border bg-[var(--chip-bg)] px-3 py-2 text-center text-base font-semibold text-[var(--sea-ink)] outline-none transition focus:border-[var(--lagoon-deep)] ${
+          isInvalid ? 'border-red-400' : 'border-[var(--line)]'
+        }`}
+      />
+      <span className="text-sm text-[var(--sea-ink-soft)]">{unit}</span>
+      {isInvalid && (
+        <span className="text-xs text-red-500">
+          {min}–{max}
+        </span>
+      )}
+    </div>
+  )
+}
+
 function SettingsPage() {
   const [dailyGoal, setDailyGoal] = useState(2000)
-  const [savedGoal, setSavedGoal] = useState(2000)
+  const [savedDailyGoal, setSavedDailyGoal] = useState(2000)
+  const [proteinGoal, setProteinGoal] = useState<number | null>(null)
+  const [carbsGoal, setCarbsGoal] = useState<number | null>(null)
+  const [fatGoal, setFatGoal] = useState<number | null>(null)
+  const [savedMacros, setSavedMacros] = useState<{ p: number | null; c: number | null; f: number | null }>({ p: null, c: null, f: null })
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -21,19 +79,43 @@ function SettingsPage() {
     getUserSettingsFn()
       .then((data) => {
         setDailyGoal(data.dailyCalorieGoal)
-        setSavedGoal(data.dailyCalorieGoal)
+        setSavedDailyGoal(data.dailyCalorieGoal)
+        setProteinGoal(data.proteinGoal)
+        setCarbsGoal(data.carbsGoal)
+        setFatGoal(data.fatGoal)
+        setSavedMacros({ p: data.proteinGoal, c: data.carbsGoal, f: data.fatGoal })
       })
       .catch(console.error)
       .finally(() => setIsLoading(false))
   }, [])
 
-  const handleSaveGoal = async () => {
-    if (dailyGoal < 500 || dailyGoal > 10000 || dailyGoal === savedGoal) return
+  const isDirty =
+    dailyGoal !== savedDailyGoal ||
+    proteinGoal !== savedMacros.p ||
+    carbsGoal !== savedMacros.c ||
+    fatGoal !== savedMacros.f
+
+  const isCalInvalid = dailyGoal < 500 || dailyGoal > 10000
+  const isMacroInvalid =
+    (proteinGoal !== null && (proteinGoal < 0 || proteinGoal > 1000)) ||
+    (carbsGoal !== null && (carbsGoal < 0 || carbsGoal > 2000)) ||
+    (fatGoal !== null && (fatGoal < 0 || fatGoal > 1000))
+
+  const handleSave = async () => {
+    if (!isDirty || isSaving || isCalInvalid || isMacroInvalid) return
     setIsSaving(true)
     setSaveError(false)
     try {
-      await updateUserSettingsFn({ data: { dailyCalorieGoal: dailyGoal } })
-      setSavedGoal(dailyGoal)
+      await updateUserSettingsFn({
+        data: {
+          dailyCalorieGoal: dailyGoal,
+          proteinGoal: proteinGoal ?? null,
+          carbsGoal: carbsGoal ?? null,
+          fatGoal: fatGoal ?? null,
+        },
+      })
+      setSavedDailyGoal(dailyGoal)
+      setSavedMacros({ p: proteinGoal, c: carbsGoal, f: fatGoal })
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch {
@@ -50,11 +132,11 @@ function SettingsPage() {
       </div>
 
       <div className="space-y-4">
-        {/* Daily Calorie Goal */}
+        {/* Goals */}
         <div className="island-shell rounded-2xl p-5">
-          <h2 className="mb-1 text-sm font-semibold text-[var(--sea-ink)]">Daily Calorie Goal</h2>
+          <h2 className="mb-1 text-sm font-semibold text-[var(--sea-ink)]">Daily Goals</h2>
           <p className="mb-4 text-xs text-[var(--sea-ink-soft)]">
-            Set your target daily calorie intake (500 - 10,000 kcal).
+            Set your calorie target and optional macro goals. Leave macro fields blank to skip.
           </p>
 
           {isLoading ? (
@@ -62,8 +144,10 @@ function SettingsPage() {
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent" />
             </div>
           ) : (
-            <>
+            <div className="space-y-3">
+              {/* Calorie goal */}
               <div className="flex items-center gap-3">
+                <span className="w-16 text-sm text-[var(--sea-ink)]">Calories</span>
                 <input
                   type="number"
                   min={500}
@@ -71,24 +155,36 @@ function SettingsPage() {
                   step={50}
                   value={dailyGoal}
                   onChange={(e) => setDailyGoal(Number(e.target.value))}
-                  className="w-28 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] px-3 py-2 text-center text-base font-semibold text-[var(--sea-ink)] outline-none focus:border-[var(--lagoon-deep)]"
+                  className={`w-24 rounded-xl border bg-[var(--chip-bg)] px-3 py-2 text-center text-base font-semibold text-[var(--sea-ink)] outline-none transition focus:border-[var(--lagoon-deep)] ${
+                    isCalInvalid ? 'border-red-400' : 'border-[var(--line)]'
+                  }`}
                 />
                 <span className="text-sm text-[var(--sea-ink-soft)]">kcal</span>
+                {isCalInvalid && <span className="text-xs text-red-500">500–10,000</span>}
+              </div>
+
+              <div className="my-1 border-t border-[var(--line)]" />
+
+              <GoalInput label="Protein" unit="g" value={proteinGoal} min={0} max={1000} onChange={setProteinGoal} />
+              <GoalInput label="Carbs" unit="g" value={carbsGoal} min={0} max={2000} onChange={setCarbsGoal} />
+              <GoalInput label="Fat" unit="g" value={fatGoal} min={0} max={1000} onChange={setFatGoal} />
+
+              <div className="pt-1">
                 <button
                   type="button"
-                  disabled={isSaving || dailyGoal === savedGoal || dailyGoal < 500 || dailyGoal > 10000}
-                  onClick={() => void handleSaveGoal()}
-                  className="ml-auto rounded-xl bg-[var(--lagoon-deep)] px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
+                  disabled={isSaving || !isDirty || isCalInvalid || isMacroInvalid}
+                  onClick={() => void handleSave()}
+                  className="w-full rounded-xl bg-[var(--lagoon-deep)] py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
                 >
-                  {isSaving ? 'Saving...' : saved ? 'Saved!' : 'Save'}
+                  {isSaving ? 'Saving…' : saved ? 'Saved!' : 'Save Goals'}
                 </button>
+                {saveError && (
+                  <p role="alert" className="mt-2 text-center text-xs text-red-500">
+                    Failed to save. Please try again.
+                  </p>
+                )}
               </div>
-              {saveError && (
-                <p role="alert" className="mt-2 text-xs text-red-500">
-                  Failed to save. Please try again.
-                </p>
-              )}
-            </>
+            </div>
           )}
         </div>
 

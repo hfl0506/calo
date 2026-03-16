@@ -16,11 +16,17 @@ export const getUserSettingsFn = createServerFn({ method: 'GET' })
 
     return {
       dailyCalorieGoal: row?.dailyCalorieGoal ?? 2000,
+      proteinGoal: row?.proteinGoal ?? null,
+      carbsGoal: row?.carbsGoal ?? null,
+      fatGoal: row?.fatGoal ?? null,
     }
   })
 
 const updateSettingsSchema = z.object({
   dailyCalorieGoal: z.number().int().min(500).max(10000),
+  proteinGoal: z.number().int().min(0).max(1000).nullable().optional(),
+  carbsGoal: z.number().int().min(0).max(2000).nullable().optional(),
+  fatGoal: z.number().int().min(0).max(1000).nullable().optional(),
 })
 
 export const updateUserSettingsFn = createServerFn({ method: 'POST' })
@@ -31,10 +37,22 @@ export const updateUserSettingsFn = createServerFn({ method: 'POST' })
 
     await db
       .insert(userSettings)
-      .values({ userId: session.user.id, dailyCalorieGoal: data.dailyCalorieGoal })
+      .values({
+        userId: session.user.id,
+        dailyCalorieGoal: data.dailyCalorieGoal,
+        proteinGoal: data.proteinGoal ?? null,
+        carbsGoal: data.carbsGoal ?? null,
+        fatGoal: data.fatGoal ?? null,
+      })
       .onConflictDoUpdate({
         target: userSettings.userId,
-        set: { dailyCalorieGoal: data.dailyCalorieGoal, updatedAt: sql`now()` },
+        set: {
+        dailyCalorieGoal: data.dailyCalorieGoal,
+        proteinGoal: data.proteinGoal ?? null,
+        carbsGoal: data.carbsGoal ?? null,
+        fatGoal: data.fatGoal ?? null,
+        updatedAt: sql`now()`,
+      },
       })
 
     return { success: true }
