@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import AnalyzingScreen from '#/components/log/AnalyzingScreen'
 import FoodReviewList from '#/components/log/FoodReviewList'
 import ImagePicker from '#/components/log/ImagePicker'
@@ -7,6 +7,7 @@ import MealTagPicker from '#/components/log/MealTagPicker'
 import NutritionSummaryBar from '#/components/log/NutritionSummaryBar'
 import { analyzeImageFn, analyzePromptFn, recalculateNutritionFn, saveMealFn } from '#/lib/server/meals'
 import { getMealUploadUrlFn } from '#/lib/server/upload'
+import { getUserSettingsFn } from '#/lib/server/settings'
 import { useRecentFoods, saveRecentFoods, recentFoodToAnalyzed } from '#/lib/recent-foods'
 import type { AnalyzedFood } from '#/lib/types'
 
@@ -33,6 +34,12 @@ function LogMealPage() {
   const [adjustmentPrompt, setAdjustmentPrompt] = useState('')
   const [isAdjusting, setIsAdjusting] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [dailyGoal, setDailyGoal] = useState<number | null>(null)
+
+  // Fetch daily goal once so we can warn if the review total exceeds it
+  useEffect(() => {
+    getUserSettingsFn().then((s) => setDailyGoal(s.dailyCalorieGoal)).catch(() => {})
+  }, [])
 
   const handleImage = async (base64: string, mimeType: string) => {
     setRetryData({ base64, mimeType })
@@ -134,11 +141,19 @@ function LogMealPage() {
     }
     const blob = new Blob([bytes], { type: mimeType })
 
-    const res = await fetch(presignedUrl, {
-      method: 'PUT',
-      body: blob,
-      headers: { 'Content-Type': mimeType },
-    })
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 30_000)
+    let res: Response
+    try {
+      res = await fetch(presignedUrl, {
+        method: 'PUT',
+        body: blob,
+        headers: { 'Content-Type': mimeType },
+        signal: controller.signal,
+      })
+    } finally {
+      clearTimeout(timeout)
+    }
 
     if (!res.ok) throw new Error(`Upload failed: ${res.status}`)
     return publicUrl
@@ -272,6 +287,17 @@ function LogMealPage() {
         {step === 'review' && (
           <div className="rise-in space-y-4 pb-28">
             <NutritionSummaryBar foods={foods} />
+
+            {dailyGoal !== null && foods.reduce((s, f) => s + f.calories, 0) > dailyGoal && (
+              <div role="alert" className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900 dark:bg-amber-950">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-amber-500">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  This meal exceeds your daily goal of {dailyGoal} kcal
+                </p>
+              </div>
+            )}
 
             <div className="space-y-1">
               <h2 className="px-1 text-sm font-semibold text-[var(--sea-ink)]">Meal type</h2>

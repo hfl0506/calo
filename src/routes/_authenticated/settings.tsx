@@ -120,6 +120,7 @@ function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [saveError, setSaveError] = useState(false)
+  const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
     getUserSettingsFn()
@@ -132,7 +133,7 @@ function SettingsPage() {
         setFiberGoal(data.fiberGoal)
         setSavedMacros({ p: data.proteinGoal, c: data.carbsGoal, f: data.fatGoal, fi: data.fiberGoal })
       })
-      .catch(console.error)
+      .catch(() => setLoadError(true))
       .finally(() => setIsLoading(false))
   }, [])
 
@@ -191,6 +192,10 @@ function SettingsPage() {
 
           {isLoading ? (
             <SettingsSkeleton />
+          ) : loadError ? (
+            <p role="alert" className="text-sm text-red-500">
+              Failed to load settings. Please refresh the page.
+            </p>
           ) : (
             <div className="space-y-3">
               {/* Calorie goal */}

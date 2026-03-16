@@ -8,7 +8,7 @@ import NutritionSummaryBar from '#/components/log/NutritionSummaryBar'
 import { UndoToast } from '#/components/UndoToast'
 import { NutrientCard } from '#/components/NutrientCard'
 import { formatDateTime } from '#/lib/format'
-import { parseNutritionValue } from '#/lib/nutrition'
+import { parseNutritionValue, roundMacro } from '#/lib/nutrition'
 import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
 import type { AnalyzedFood, MealTag } from '#/lib/types'
 
@@ -277,9 +277,9 @@ function MealDetailPage() {
               <h3 className="mb-3 text-sm font-semibold text-[var(--sea-ink)]">Nutrition Totals</h3>
               <div className="grid grid-cols-4 gap-3">
                 <NutrientCard label="Calories" value={Math.round(meal.totals.calories)} unit="kcal" large />
-                <NutrientCard label="Protein" value={Math.round(meal.totals.protein * 10) / 10} unit="g" />
-                <NutrientCard label="Carbs" value={Math.round(meal.totals.carbs * 10) / 10} unit="g" />
-                <NutrientCard label="Fat" value={Math.round(meal.totals.fat * 10) / 10} unit="g" />
+                <NutrientCard label="Protein" value={roundMacro(meal.totals.protein)} unit="g" />
+                <NutrientCard label="Carbs" value={roundMacro(meal.totals.carbs)} unit="g" />
+                <NutrientCard label="Fat" value={roundMacro(meal.totals.fat)} unit="g" />
               </div>
             </div>
 
@@ -295,9 +295,9 @@ function MealDetailPage() {
                         <p className="text-xs text-[var(--sea-ink-soft)]">{food.portionDescription}</p>
                       )}
                       <div className="mt-2 flex gap-3">
-                        <span className="text-xs text-[var(--sea-ink-soft)]">P: {Math.round(parseNutritionValue(food.protein) * 10) / 10}g</span>
-                        <span className="text-xs text-[var(--sea-ink-soft)]">C: {Math.round(parseNutritionValue(food.carbs) * 10) / 10}g</span>
-                        <span className="text-xs text-[var(--sea-ink-soft)]">F: {Math.round(parseNutritionValue(food.fat) * 10) / 10}g</span>
+                        <span className="text-xs text-[var(--sea-ink-soft)]">P: {roundMacro(parseNutritionValue(food.protein))}g</span>
+                        <span className="text-xs text-[var(--sea-ink-soft)]">C: {roundMacro(parseNutritionValue(food.carbs))}g</span>
+                        <span className="text-xs text-[var(--sea-ink-soft)]">F: {roundMacro(parseNutritionValue(food.fat))}g</span>
                       </div>
                     </div>
                     <span className="text-sm font-bold text-[var(--sea-ink)]">

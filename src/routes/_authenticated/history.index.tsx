@@ -4,6 +4,7 @@ import { getMealsRangeFn } from '#/lib/server/meals'
 import { prefetchMealDetail } from '#/lib/meal-prefetch-cache'
 import { HistorySkeleton } from '#/components/SkeletonCard'
 import { formatDate, formatTime } from '#/lib/format'
+import { roundMacro } from '#/lib/nutrition'
 import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
 import { CalorieTrendChart } from '#/components/CalorieTrendChart'
 import type { Meal } from '#/lib/types'
@@ -205,19 +206,19 @@ function HistoryPage() {
                     <div className="mt-2 grid grid-cols-3 gap-2">
                       <div className="flex flex-col items-center rounded-lg bg-[var(--chip-bg)] py-1.5">
                         <span className="text-sm font-bold text-[var(--sea-ink)]">
-                          {Math.round(totalProtein * 10) / 10}g
+                          {roundMacro(totalProtein)}g
                         </span>
                         <span className="text-[10px] text-[var(--sea-ink-soft)]">Protein</span>
                       </div>
                       <div className="flex flex-col items-center rounded-lg bg-[var(--chip-bg)] py-1.5">
                         <span className="text-sm font-bold text-[var(--sea-ink)]">
-                          {Math.round(totalCarbs * 10) / 10}g
+                          {roundMacro(totalCarbs)}g
                         </span>
                         <span className="text-[10px] text-[var(--sea-ink-soft)]">Carbs</span>
                       </div>
                       <div className="flex flex-col items-center rounded-lg bg-[var(--chip-bg)] py-1.5">
                         <span className="text-sm font-bold text-[var(--sea-ink)]">
-                          {Math.round(totalFat * 10) / 10}g
+                          {roundMacro(totalFat)}g
                         </span>
                         <span className="text-[10px] text-[var(--sea-ink-soft)]">Fat</span>
                       </div>

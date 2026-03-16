@@ -34,7 +34,7 @@ export const getMealUploadUrlFn = createServerFn({ method: 'POST' })
       CacheControl: 'public, max-age=31536000, immutable',
     })
 
-    const presignedUrl = await getSignedUrl(r2, command, { expiresIn: 300 })
+    const presignedUrl = await getSignedUrl(r2, command, { expiresIn: 900 })
     const publicUrl = `${process.env.R2_PUBLIC_URL}/${key}`
 
     return { presignedUrl, key, publicUrl }

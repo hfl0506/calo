@@ -11,6 +11,11 @@ import { calcTotals } from '#/lib/nutrition'
 import { getSession } from '#/lib/server/session'
 import { getR2Client } from '#/lib/server/r2'
 import { analyzeRateLimiter, recalculateRateLimiter } from '#/lib/server/rate-limit'
+
+function rateLimitMessage(err: unknown): string {
+  const secs = Math.ceil(((err as { msBeforeNext?: number }).msBeforeNext ?? 60000) / 1000)
+  return `Too many requests. Please try again in ${secs} second${secs !== 1 ? 's' : ''}.`
+}
 import type { AnalyzedFood, MealTag } from '#/lib/types'
 import { localDateToUTC } from '#/lib/timezone'
 
@@ -49,8 +54,8 @@ export const recalculateNutritionFn = createServerFn({ method: 'POST' })
 
     try {
       await recalculateRateLimiter.consume(session.user.id)
-    } catch {
-      return { error: 'Too many requests. Please wait a moment before adjusting again.' }
+    } catch (err) {
+      return { error: rateLimitMessage(err) }
     }
 
     try {
@@ -101,8 +106,8 @@ export const analyzePromptFn = createServerFn({ method: 'POST' })
 
     try {
       await analyzeRateLimiter.consume(session.user.id)
-    } catch {
-      return { foods: [] as AnalyzedFood[], error: 'Too many requests. Please wait a moment before analyzing again.' }
+    } catch (err) {
+      return { foods: [] as AnalyzedFood[], error: rateLimitMessage(err) }
     }
 
     const { prompt } = data
@@ -181,8 +186,8 @@ export const analyzeImageFn = createServerFn({ method: 'POST' })
 
     try {
       await analyzeRateLimiter.consume(session.user.id)
-    } catch {
-      return { foods: [] as AnalyzedFood[], error: 'Too many requests. Please wait a moment before analyzing again.' }
+    } catch (err) {
+      return { foods: [] as AnalyzedFood[], error: rateLimitMessage(err) }
     }
 
     const { imageBase64, mimeType } = data

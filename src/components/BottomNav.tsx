@@ -20,6 +20,7 @@ export default function BottomNav() {
               : 'text-[var(--sea-ink-soft)] hover:text-[var(--sea-ink)]'
           }`}
           aria-label="Home"
+          aria-current={isHome ? 'page' : undefined}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -47,6 +48,7 @@ export default function BottomNav() {
               : 'text-[var(--sea-ink-soft)] hover:text-[var(--sea-ink)]'
           }`}
           aria-label="History"
+          aria-current={isHistory ? 'page' : undefined}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -75,6 +77,7 @@ export default function BottomNav() {
               : 'text-[var(--sea-ink-soft)] hover:text-[var(--sea-ink)]'
           }`}
           aria-label="Settings"
+          aria-current={isSettings ? 'page' : undefined}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
