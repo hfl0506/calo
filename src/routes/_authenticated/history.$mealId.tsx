@@ -10,39 +10,13 @@ import { NutrientCard } from '#/components/NutrientCard'
 import { formatDateTime } from '#/lib/format'
 import { parseNutritionValue, roundMacro } from '#/lib/nutrition'
 import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
-import type { AnalyzedFood, MealTag } from '#/lib/types'
+import type { AnalyzedFood } from '#/lib/types'
 
 export const Route = createFileRoute('/_authenticated/history/$mealId')({
   component: MealDetailPage,
 })
 
-type MealDetail = {
-  id: string
-  userId: string
-  tag: MealTag
-  loggedAt: Date | null
-  imageUrl: string | null
-  notes: string | null
-  createdAt: Date | null
-  foods: Array<{
-    id: number
-    mealId: string
-    name: string
-    portionDescription: string | null
-    calories: string
-    protein: string | null
-    carbs: string | null
-    fat: string | null
-    fiber: string | null
-    createdAt: Date | null
-  }>
-  totals: {
-    calories: number
-    protein: number
-    carbs: number
-    fat: number
-  }
-}
+type MealDetail = Awaited<ReturnType<typeof getMealDetailFn>>
 
 function mealFoodsToAnalyzed(foods: MealDetail['foods']): AnalyzedFood[] {
   return foods.map((f) => ({
@@ -60,7 +34,7 @@ function mealFoodsToAnalyzed(foods: MealDetail['foods']): AnalyzedFood[] {
 function MealDetailPage() {
   const { mealId } = Route.useParams()
   const navigate = useNavigate()
-  const cached = getCachedMealDetail(mealId) as MealDetail | null
+  const cached = getCachedMealDetail(mealId)
   const [meal, setMeal] = useState<MealDetail | null>(cached)
   const [isLoading, setIsLoading] = useState(!cached)
   const [error, setError] = useState<string | null>(null)
@@ -77,7 +51,7 @@ function MealDetailPage() {
 
   useEffect(() => {
     getMealDetailFn({ data: { mealId } })
-      .then((data) => setMeal(data as MealDetail))
+      .then((data) => setMeal(data))
       .catch((err) => { if (!cached) setError(err instanceof Error ? err.message : 'Failed to load meal') })
       .finally(() => setIsLoading(false))
   }, [mealId])
@@ -104,7 +78,7 @@ function MealDetailPage() {
       })
       // Refetch updated meal
       const updated = await getMealDetailFn({ data: { mealId } })
-      setMeal(updated as MealDetail)
+      setMeal(updated)
       setIsEditing(false)
     } catch (err) {
       setEditError(err instanceof Error ? err.message : 'Failed to save changes')

@@ -38,7 +38,8 @@ export function getRecentFoods(): RecentFood[] {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw === _cachedRaw) return _cachedFoods
     _cachedRaw = raw
-    _cachedFoods = raw ? (JSON.parse(raw) as RecentFood[]) : []
+    const parsed: unknown = raw ? JSON.parse(raw) : null
+    _cachedFoods = Array.isArray(parsed) ? (parsed as RecentFood[]) : []
     return _cachedFoods
   } catch {
     return _cachedFoods
@@ -101,7 +102,7 @@ export function clearRecentFoods(): void {
 // Returns the localStorage value on the client, empty array on the server.
 // Avoids the useEffect(setState, []) flash warning.
 export function useRecentFoods(): RecentFood[] {
-  return useSyncExternalStore(subscribeToRecentFoods, getRecentFoods, () => [] as RecentFood[])
+  return useSyncExternalStore(subscribeToRecentFoods, getRecentFoods, (): RecentFood[] => [])
 }
 
 export function recentFoodToAnalyzed(f: RecentFood): AnalyzedFood {

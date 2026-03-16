@@ -4,6 +4,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { z } from 'zod'
 import { getSession } from '#/lib/server/session'
 import { getR2Client } from '#/lib/server/r2'
+import { env } from '#/lib/env'
 
 const getMealUploadUrlSchema = z.object({
   fileName: z.string().min(1).max(100),
@@ -28,14 +29,14 @@ export const getMealUploadUrlFn = createServerFn({ method: 'POST' })
 
     const r2 = getR2Client()
     const command = new PutObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME!,
+      Bucket: env.R2_BUCKET_NAME,
       Key: key,
       ContentType: data.contentType,
       CacheControl: 'public, max-age=31536000, immutable',
     })
 
     const presignedUrl = await getSignedUrl(r2, command, { expiresIn: 900 })
-    const publicUrl = `${process.env.R2_PUBLIC_URL}/${key}`
+    const publicUrl = `${env.R2_PUBLIC_URL}/${key}`
 
     return { presignedUrl, key, publicUrl }
   })

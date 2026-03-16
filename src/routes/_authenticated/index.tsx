@@ -8,7 +8,7 @@ import { prefetchMealDetail } from '#/lib/meal-prefetch-cache'
 import { HomeSkeleton } from '#/components/SkeletonCard'
 import { formatTime } from '#/lib/format'
 import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
-import type { Meal, MealTag } from '#/lib/types'
+import type { MealTag } from '#/lib/types'
 
 const homeSearchSchema = z.object({
   date: z.string().optional(),
@@ -26,7 +26,7 @@ export const Route = createFileRoute('/_authenticated/')({
       getUserSettingsFn(),
       getStreakFn(),
     ])
-    return { meals: meals as Meal[], settings, streak: streakData.streak }
+    return { meals, settings, streak: streakData.streak }
   },
   pendingComponent: HomeSkeleton,
   pendingMs: 0,
@@ -68,23 +68,22 @@ function HomePage() {
   const [saveError, setSaveError] = useState(false)
 
   const today = getTodayLocal()
-  const currentDate = (search.date as string | undefined) ?? today
+  const currentDate = search.date ?? today
   const isToday = currentDate === today
 
   useEffect(() => {
-    const s = search as Record<string, unknown>
-    if (s.saved) {
+    if (search.saved) {
       setSavedNotice(true)
       setIsSaving(false)
       setTimeout(() => setSavedNotice(false), 3000)
       void navigate({ to: '/', search: (prev) => ({ ...prev, saved: undefined }), replace: true })
       void router.invalidate()
     }
-    if (s.saving) {
+    if (search.saving) {
       setIsSaving(true)
       setSaveError(false)
     }
-    if (s.saveError) {
+    if (search.saveError) {
       setIsSaving(false)
       setSaveError(true)
       void navigate({ to: '/', search: (prev) => ({ ...prev, saveError: undefined }), replace: true })

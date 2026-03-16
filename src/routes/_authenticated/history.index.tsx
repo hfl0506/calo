@@ -39,7 +39,7 @@ function HistoryPage() {
     const allMeals = await getMealsRangeFn({ data: { startDate, endDate, timezone: tz } })
 
     const grouped: Record<string, Meal[]> = {}
-    for (const meal of allMeals as Meal[]) {
+    for (const meal of allMeals) {
       const dateStr = new Date(meal.loggedAt!).toLocaleDateString('en-CA', { timeZone: tz })
       if (!grouped[dateStr]) grouped[dateStr] = []
       grouped[dateStr].push(meal)

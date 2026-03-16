@@ -9,8 +9,13 @@ const required = [
   'R2_PUBLIC_URL',
 ] as const
 
+type RequiredEnvKey = (typeof required)[number]
+
 for (const key of required) {
   if (!process.env[key]) {
     throw new Error(`Missing required environment variable: ${key}`)
   }
 }
+
+// All required keys are validated above — safe to narrow away `undefined`
+export const env = process.env as Record<RequiredEnvKey, string>
