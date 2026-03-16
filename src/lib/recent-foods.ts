@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from 'react'
 import type { AnalyzedFood } from '#/lib/types'
 
 const STORAGE_KEY = 'recent_foods'
@@ -14,13 +15,33 @@ export interface RecentFood {
   lastUsed: number // timestamp
 }
 
+const subscribers = new Set<() => void>()
+
+function subscribeToRecentFoods(cb: () => void) {
+  subscribers.add(cb)
+  return () => subscribers.delete(cb)
+}
+
+function notifySubscribers() {
+  subscribers.forEach((cb) => cb())
+}
+
+// Memoize the parsed result so useSyncExternalStore gets a stable reference
+// when the underlying data hasn't changed. JSON.parse() always returns a new
+// object, which would cause React to detect a "changed" snapshot on every call
+// and loop infinitely.
+let _cachedRaw: string | null | undefined = undefined
+let _cachedFoods: RecentFood[] = []
+
 export function getRecentFoods(): RecentFood[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return []
-    return JSON.parse(raw) as RecentFood[]
+    if (raw === _cachedRaw) return _cachedFoods
+    _cachedRaw = raw
+    _cachedFoods = raw ? (JSON.parse(raw) as RecentFood[]) : []
+    return _cachedFoods
   } catch {
-    return []
+    return _cachedFoods
   }
 }
 
@@ -54,9 +75,33 @@ export function saveRecentFoods(foods: AnalyzedFood[]): void {
       .slice(0, MAX_ITEMS)
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(sorted))
+    notifySubscribers()
   } catch {
     // localStorage unavailable (SSR, private browsing) — ignore silently
   }
+}
+
+export function removeRecentFood(name: string): void {
+  try {
+    const foods = getRecentFoods().filter(
+      (f) => f.name.toLowerCase() !== name.toLowerCase(),
+    )
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(foods))
+    notifySubscribers()
+  } catch { /* ignore */ }
+}
+
+export function clearRecentFoods(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+    notifySubscribers()
+  } catch { /* ignore */ }
+}
+
+// Returns the localStorage value on the client, empty array on the server.
+// Avoids the useEffect(setState, []) flash warning.
+export function useRecentFoods(): RecentFood[] {
+  return useSyncExternalStore(subscribeToRecentFoods, getRecentFoods, () => [] as RecentFood[])
 }
 
 export function recentFoodToAnalyzed(f: RecentFood): AnalyzedFood {

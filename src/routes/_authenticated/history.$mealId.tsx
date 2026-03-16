@@ -5,6 +5,8 @@ import { getCachedMealDetail } from '#/lib/meal-prefetch-cache'
 import { MealDetailSkeleton } from '#/components/SkeletonCard'
 import FoodReviewList from '#/components/log/FoodReviewList'
 import NutritionSummaryBar from '#/components/log/NutritionSummaryBar'
+import { UndoToast } from '#/components/UndoToast'
+import { NutrientCard } from '#/components/NutrientCard'
 import { formatDateTime } from '#/lib/format'
 import { parseNutritionValue } from '#/lib/nutrition'
 import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
@@ -63,7 +65,7 @@ function MealDetailPage() {
   const [isLoading, setIsLoading] = useState(!cached)
   const [error, setError] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
+  const [showUndoToast, setShowUndoToast] = useState(false)
   const [showLightbox, setShowLightbox] = useState(false)
 
   // Edit mode state
@@ -111,17 +113,20 @@ function MealDetailPage() {
     }
   }
 
-  const handleDelete = async () => {
-    navigator.vibrate?.(10)
-    setIsDeleting(true)
+  const executeDelete = async () => {
     try {
       await deleteMealFn({ data: { mealId } })
       await navigate({ to: '/history' })
     } catch (err) {
+      setShowUndoToast(false)
       setError(err instanceof Error ? err.message : 'Failed to delete meal')
-      setIsDeleting(false)
-      setShowDeleteConfirm(false)
     }
+  }
+
+  const handleDelete = () => {
+    navigator.vibrate?.(10)
+    setShowDeleteConfirm(false)
+    setShowUndoToast(true)
   }
 
   return (
@@ -336,39 +341,37 @@ function MealDetailPage() {
           <div className="island-shell rise-in mx-4 w-full max-w-sm rounded-2xl p-6">
             <h3 className="mb-2 text-base font-bold text-[var(--sea-ink)]">Delete this meal?</h3>
             <p className="mb-5 text-sm text-[var(--sea-ink-soft)]">
-              This will permanently delete the meal and all its food entries. This action cannot be undone.
+              You can undo the deletion for 5 seconds after confirming.
             </p>
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(false)}
-                disabled={isDeleting}
                 className="flex-1 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] py-2.5 text-sm font-medium text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)]"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={() => void handleDelete()}
-                disabled={isDeleting}
-                className="flex-1 rounded-xl bg-red-500 py-2.5 text-sm font-semibold text-white transition hover:bg-red-600 disabled:opacity-60"
+                onClick={handleDelete}
+                className="flex-1 rounded-xl bg-red-500 py-2.5 text-sm font-semibold text-white transition hover:bg-red-600"
               >
-                {isDeleting ? 'Deleting…' : 'Delete'}
+                Delete
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Undo toast */}
+      {showUndoToast && (
+        <UndoToast
+          message="Meal deleted"
+          onUndo={() => setShowUndoToast(false)}
+          onDismiss={() => void executeDelete()}
+        />
+      )}
     </div>
   )
 }
 
-function NutrientCard({ label, value, unit, large }: { label: string; value: number; unit: string; large?: boolean }) {
-  return (
-    <div className="flex flex-col items-center rounded-xl bg-[var(--chip-bg)] p-2 text-center">
-      <span className={`font-bold text-[var(--sea-ink)] ${large ? 'text-xl' : 'text-base'}`}>{value}</span>
-      <span className="text-xs text-[var(--sea-ink-soft)]">{unit}</span>
-      <span className="text-xs text-[var(--sea-ink-soft)]">{label}</span>
-    </div>
-  )
-}

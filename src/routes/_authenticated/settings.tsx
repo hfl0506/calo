@@ -5,6 +5,7 @@ import { authClient } from '#/lib/auth-client'
 import { clearPrefetchCache } from '#/lib/meal-prefetch-cache'
 import { getUserSettingsFn, updateUserSettingsFn } from '#/lib/server/settings'
 import { SettingsSkeleton } from '#/components/SkeletonCard'
+import { useRecentFoods, removeRecentFood, clearRecentFoods } from '#/lib/recent-foods'
 
 export const Route = createFileRoute('/_authenticated/settings')({
   component: SettingsPage,
@@ -17,6 +18,49 @@ interface GoalInputProps {
   min: number
   max: number
   onChange: (v: number | null) => void
+}
+
+function RecentFoodsManager() {
+  const recent = useRecentFoods()
+
+  if (recent.length === 0) {
+    return <p className="text-sm text-[var(--sea-ink-soft)]">No recent foods cached.</p>
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="space-y-1">
+        {recent.map((f) => (
+          <div
+            key={f.name}
+            className="flex items-center justify-between rounded-xl bg-[var(--chip-bg)] px-3 py-2"
+          >
+            <div>
+              <span className="text-sm font-medium text-[var(--sea-ink)]">{f.name}</span>
+              <span className="ml-2 text-xs text-[var(--sea-ink-soft)]">{Math.round(f.calories)} kcal</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => removeRecentFood(f.name)}
+              aria-label={`Remove ${f.name} from recent foods`}
+              className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--sea-ink-soft)] transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={clearRecentFoods}
+        className="w-full rounded-xl border border-red-200 py-2 text-sm font-medium text-red-500 transition hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950"
+      >
+        Clear all ({recent.length} item{recent.length !== 1 ? 's' : ''})
+      </button>
+    </div>
+  )
 }
 
 function GoalInput({ label, unit, value, min, max, onChange }: GoalInputProps) {
@@ -200,6 +244,15 @@ function SettingsPage() {
             Switch between light, dark, and auto (system) themes.
           </p>
           <ThemeToggle />
+        </div>
+
+        {/* Recent Foods */}
+        <div className="island-shell rounded-2xl p-5">
+          <h2 className="mb-1 text-sm font-semibold text-[var(--sea-ink)]">Recent Foods</h2>
+          <p className="mb-4 text-xs text-[var(--sea-ink-soft)]">
+            Foods you log are saved locally for quick re-logging.
+          </p>
+          <RecentFoodsManager />
         </div>
 
         {/* Account */}

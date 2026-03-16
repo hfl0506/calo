@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import AnalyzingScreen from '#/components/log/AnalyzingScreen'
 import FoodReviewList from '#/components/log/FoodReviewList'
 import ImagePicker from '#/components/log/ImagePicker'
@@ -7,9 +7,8 @@ import MealTagPicker from '#/components/log/MealTagPicker'
 import NutritionSummaryBar from '#/components/log/NutritionSummaryBar'
 import { analyzeImageFn, analyzePromptFn, recalculateNutritionFn, saveMealFn } from '#/lib/server/meals'
 import { getMealUploadUrlFn } from '#/lib/server/upload'
-import { getRecentFoods, saveRecentFoods, recentFoodToAnalyzed } from '#/lib/recent-foods'
+import { useRecentFoods, saveRecentFoods, recentFoodToAnalyzed } from '#/lib/recent-foods'
 import type { AnalyzedFood } from '#/lib/types'
-import type { RecentFood } from '#/lib/recent-foods'
 
 const withIds = (foods: AnalyzedFood[]): AnalyzedFood[] =>
   foods.map((f) => ({ ...f, id: f.id ?? crypto.randomUUID() }))
@@ -28,16 +27,12 @@ function LogMealPage() {
   const [error, setError] = useState<string | null>(null)
   const [retryData, setRetryData] = useState<{ base64: string; mimeType: string } | null>(null)
   const [imageData, setImageData] = useState<{ base64: string; mimeType: string } | null>(null)
-  const [recentFoods, setRecentFoods] = useState<RecentFood[]>([])
+  const recentFoods = useRecentFoods()
   const [notes, setNotes] = useState('')
   const [loggedAt, setLoggedAt] = useState('')
   const [adjustmentPrompt, setAdjustmentPrompt] = useState('')
   const [isAdjusting, setIsAdjusting] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-
-  useEffect(() => {
-    setRecentFoods(getRecentFoods())
-  }, [])
 
   const handleImage = async (base64: string, mimeType: string) => {
     setRetryData({ base64, mimeType })
@@ -127,7 +122,7 @@ function LogMealPage() {
   const uploadImageToR2 = async (base64: string, mimeType: string): Promise<string | null> => {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
     const date = new Date().toLocaleDateString('en-CA', { timeZone: tz })
-    const fileName = `meal_${Date.now()}`
+    const fileName = `meal_${crypto.randomUUID()}`
     const { presignedUrl, publicUrl } = await getMealUploadUrlFn({
       data: { fileName, contentType: mimeType as 'image/jpeg' | 'image/png' | 'image/webp', date },
     })
