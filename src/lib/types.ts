@@ -23,6 +23,8 @@ export interface AnalyzedFood {
   carbs: number
   fat: number
   fiber: number
+  estimatedWeightGrams?: number
+  nutritionSource?: 'gemini' | 'usda'
 }
 
 export interface MealFood {

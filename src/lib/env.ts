@@ -19,3 +19,6 @@ for (const key of required) {
 
 // All required keys are validated above — safe to narrow away `undefined`
 export const env = process.env as Record<RequiredEnvKey, string>
+
+// Optional USDA FoodData Central API key (enables hybrid calorie estimation)
+export const usdaApiKey = process.env.USDA_API_KEY

@@ -23,6 +23,7 @@ import type { AnalyzedFood, Meal } from "#/lib/types";
 import { localDateToUTC } from "#/lib/timezone";
 import { env } from "#/lib/env";
 import { ANALYZE_TEXT_PROMPT, ANALYZE_IMAGE_PROMPT, RECALCULATE_PROMPT } from "#/lib/server/prompts";
+import { enrichWithNutritionAPI } from "#/lib/server/nutrition-api";
 
 function throwRateLimitError(err: unknown): never {
   const ms = typeof (err as RateLimiterRes)?.msBeforeNext === 'number'
@@ -62,6 +63,8 @@ const analyzedFoodSchema = z.object({
   carbs: z.number().default(0),
   fat: z.number().default(0),
   fiber: z.number().default(0),
+  estimatedWeightGrams: z.number().optional(),
+  nutritionSource: z.enum(['gemini', 'usda']).optional(),
 });
 
 const analyzedFoodsArraySchema = z.array(analyzedFoodSchema);
@@ -92,7 +95,8 @@ export const recalculateNutritionFn = createServerFn({ method: "POST" })
 
     const result = await generateAndParse(prompt, analyzedFoodSchema);
     if (result.isErr()) throw new AppError('ANALYSIS_FAILED', 'Failed to recalculate nutrition');
-    return { food: result.value };
+    const [enriched] = await enrichWithNutritionAPI([result.value]);
+    return { food: enriched };
   });
 
 export const analyzePromptFn = createServerFn({ method: "POST" })
@@ -124,7 +128,8 @@ export const analyzePromptFn = createServerFn({ method: "POST" })
       throw new AppError('NO_ITEMS', 'No food items detected. Try describing what you ate, e.g. "a bowl of rice with grilled chicken".');
     }
 
-    return { foods: result.value };
+    const enriched = await enrichWithNutritionAPI(result.value);
+    return { foods: enriched };
   });
 
 const analyzeImageSchema = z.object({
@@ -156,7 +161,8 @@ export const analyzeImageFn = createServerFn({ method: "POST" })
       throw new AppError('NO_ITEMS', 'No food items detected in the image');
     }
 
-    return { foods: result.value };
+    const enriched = await enrichWithNutritionAPI(result.value);
+    return { foods: enriched };
   });
 
 const finiteNonNegative = z.number().finite().nonnegative();

@@ -19,11 +19,13 @@ or:
     "protein": 10.5,
     "carbs": 30.0,
     "fat": 8.0,
-    "fiber": 3.0
+    "fiber": 3.0,
+    "estimatedWeightGrams": 200
   }
 ]
 
 All numeric values must be numbers (not strings).
+"estimatedWeightGrams" is your best estimate of the total edible weight in grams for the described portion.
 
 User message: ${userMessage}`
 
@@ -40,11 +42,14 @@ Return ONLY a valid JSON array with no markdown fences:
     "protein": 10.5,
     "carbs": 30.0,
     "fat": 8.0,
-    "fiber": 3.0
+    "fiber": 3.0,
+    "estimatedWeightGrams": 200
   }
 ]
 
-All numeric values must be numbers (not strings). If no food is visible return [].`
+All numeric values must be numbers (not strings).
+"estimatedWeightGrams" is your best estimate of the total edible weight in grams for the visible portion.
+If no food is visible return [].`
 
 export const RECALCULATE_PROMPT = (originalName: string, portionDescription: string, adjustmentPrompt: string) =>
   `You are a nutrition expert. Given:
@@ -61,7 +66,8 @@ Return ONLY a valid JSON object with no markdown fences:
   "protein": 0.0,
   "carbs": 0.0,
   "fat": 0.0,
-  "fiber": 0.0
+  "fiber": 0.0,
+  "estimatedWeightGrams": 0
 }
 
 All numeric values must be numbers (not strings).
