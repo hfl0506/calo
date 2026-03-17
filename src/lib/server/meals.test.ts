@@ -45,7 +45,7 @@ vi.mock('@tanstack/react-start', () => ({
 
 vi.mock('@tanstack/react-start/server', () => ({ getRequest: mockGetRequest }))
 
-vi.mock('#/lib/server/session', () => ({ getSession: mockGetSession }))
+vi.mock('#/lib/server/session.server', () => ({ getSession: mockGetSession }))
 
 vi.mock('#/lib/server/rate-limit', () => ({
   analyzeRateLimiter: { consume: mockAnalyzeConsume },

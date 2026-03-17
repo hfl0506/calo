@@ -16,7 +16,7 @@ vi.mock('@tanstack/react-start', () => ({
   },
 }))
 
-vi.mock('#/lib/server/session', () => ({ getSession: mockGetSession }))
+vi.mock('#/lib/server/session.server', () => ({ getSession: mockGetSession }))
 
 vi.mock('#/db', () => ({
   db: {

@@ -1,15 +1,13 @@
 import { Link, Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import BottomNav from "../components/BottomNav";
-import { getSession } from "#/lib/server/session";
+import { getSessionFn } from "#/lib/server/session";
 import { RouteErrorBoundary } from "#/components/RouteErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
-    const session = await getSession();
-    if (!session) {
-      throw redirect({ to: "/sign-in" });
-    }
+    const session = await getSessionFn();
+    if (!session) throw redirect({ to: "/sign-in" });
     return { session };
   },
   component: AuthenticatedLayout,

@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { z } from 'zod'
-import { getSession } from '#/lib/server/session'
+import { getSession } from '#/lib/server/session.server'
 import { getR2Client } from '#/lib/server/r2'
 import { env } from '#/lib/env'
 

@@ -3,7 +3,7 @@ import { eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '#/db'
 import { userSettings } from '#/db/schema'
-import { getSession } from '#/lib/server/session'
+import { getSession } from '#/lib/server/session.server'
 import { AppError } from '#/lib/server/errors'
 
 export const getUserSettingsFn = createServerFn({ method: 'GET' })

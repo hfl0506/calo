@@ -16,7 +16,7 @@ vi.mock('@tanstack/react-start', () => ({
   },
 }))
 
-vi.mock('#/lib/server/session', () => ({ getSession: mockGetSession }))
+vi.mock('#/lib/server/session.server', () => ({ getSession: mockGetSession }))
 
 vi.mock('@aws-sdk/client-s3', () => ({ PutObjectCommand: vi.fn() }))
 

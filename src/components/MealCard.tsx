@@ -21,7 +21,7 @@ export const MealCard = memo(function MealCard({ meal, showImage = false, imageL
     <Link
       to="/history/$mealId"
       params={{ mealId: meal.id }}
-      className={`island-shell ${showImage ? 'block' : 'flex items-center gap-3'} overflow-hidden rounded-2xl transition hover:shadow-lg`}
+      className={`island-shell ${showImage ? 'block' : 'flex items-center gap-3 px-4 py-3'} overflow-hidden rounded-2xl transition hover:shadow-lg`}
       onMouseEnter={() => prefetchMealDetail(meal.id)}
       onTouchStart={() => prefetchMealDetail(meal.id)}
     >

@@ -6,7 +6,7 @@ import { z } from "zod";
 import { db } from "#/db";
 import { meals, mealFoods } from "#/db/schema";
 import { calcTotals } from "#/lib/nutrition";
-import { getSession } from "#/lib/server/session";
+import { getSession } from "#/lib/server/session.server";
 import { getR2Client } from "#/lib/server/r2";
 import {
   analyzeRateLimiter,
