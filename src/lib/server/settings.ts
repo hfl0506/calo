@@ -4,11 +4,12 @@ import { z } from 'zod'
 import { db } from '#/db'
 import { userSettings } from '#/db/schema'
 import { getSession } from '#/lib/server/session'
+import { AppError } from '#/lib/server/errors'
 
 export const getUserSettingsFn = createServerFn({ method: 'GET' })
   .handler(async () => {
     const session = await getSession()
-    if (!session) throw new Error('Unauthorized')
+    if (!session) throw new AppError('UNAUTHORIZED', 'Unauthorized')
 
     const row = await db.query.userSettings.findFirst({
       where: eq(userSettings.userId, session.user.id),
@@ -35,7 +36,7 @@ export const updateUserSettingsFn = createServerFn({ method: 'POST' })
   .inputValidator((data: unknown) => updateSettingsSchema.parse(data))
   .handler(async ({ data }) => {
     const session = await getSession()
-    if (!session) throw new Error('Unauthorized')
+    if (!session) throw new AppError('UNAUTHORIZED', 'Unauthorized')
 
     await db
       .insert(userSettings)

@@ -147,118 +147,20 @@ function HomePage() {
         </div>
       )}
 
-      {/* Summary Card */}
-      <div className="island-shell rise-in mb-6 rounded-2xl p-5">
-        {/* Header: date nav + streak */}
-        <div className="mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handlePrevDay}
-              aria-label="Previous day"
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--sea-ink-soft)] transition hover:bg-[var(--chip-bg)] hover:text-[var(--sea-ink)]"
-            >
-              <ChevronLeft size={16} strokeWidth={2.5} />
-            </button>
-            <h2 className="text-base font-bold text-[var(--sea-ink)]">{formatDateLabel(currentDate)}</h2>
-            <button
-              type="button"
-              onClick={handleNextDay}
-              disabled={isToday}
-              aria-label="Next day"
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--sea-ink-soft)] transition hover:bg-[var(--chip-bg)] hover:text-[var(--sea-ink)] disabled:opacity-30"
-            >
-              <ChevronRight size={16} strokeWidth={2.5} />
-            </button>
-          </div>
-          {streak > 0 && isToday && (
-            <span className="flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-semibold text-orange-500 dark:bg-orange-950 dark:text-orange-400">
-              🔥 {streak} day{streak !== 1 ? 's' : ''}
-            </span>
-          )}
-        </div>
-
-        {(() => {
-          const isOverGoal = totalCalories > settings.dailyCalorieGoal
-          const progressPercent = Math.min((totalCalories / settings.dailyCalorieGoal) * 100, 100)
-          const overBy = Math.round(totalCalories - settings.dailyCalorieGoal)
-          const remaining = Math.round(settings.dailyCalorieGoal - totalCalories)
-          return (
-            <>
-              <div className="mb-1 flex items-end gap-2">
-                <span className={`text-4xl font-bold ${isOverGoal ? 'text-orange-500 dark:text-orange-400' : 'text-[var(--sea-ink)]'}`}>
-                  {Math.round(totalCalories)}
-                </span>
-                <span className="mb-1 text-sm text-[var(--sea-ink-soft)]">/ {settings.dailyCalorieGoal} kcal</span>
-              </div>
-              {isOverGoal ? (
-                <p role="alert" className="mb-2 text-xs font-medium text-orange-500 dark:text-orange-400">
-                  {overBy} kcal over your daily goal
-                </p>
-              ) : (
-                <p className="mb-2 text-xs text-[var(--sea-ink-soft)]">
-                  {remaining} kcal remaining
-                </p>
-              )}
-              <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-[var(--line)]">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${isOverGoal ? 'bg-orange-400' : 'bg-[var(--lagoon-deep)]'}`}
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-            </>
-          )
-        })()}
-
-        {/* Macro totals */}
-        <div className="mb-4 grid grid-cols-4 gap-2">
-          {[
-            { label: 'Protein', value: totalProtein, goal: settings.proteinGoal, color: 'var(--macro-protein)' },
-            { label: 'Carbs',   value: totalCarbs,   goal: settings.carbsGoal,   color: 'var(--macro-carbs)' },
-            { label: 'Fat',     value: totalFat,     goal: settings.fatGoal,     color: 'var(--macro-fat)' },
-            { label: 'Fiber',   value: totalFiber,   goal: settings.fiberGoal,  color: 'var(--macro-fiber)' },
-          ].map(({ label, value, goal, color }) => {
-            const rounded = Math.round(value * 10) / 10
-            const pct = goal ? Math.min((value / goal) * 100, 100) : null
-            const isOver = goal !== null && value > goal
-            return (
-              <div key={label} className="flex flex-col rounded-xl bg-[var(--chip-bg)] px-2 py-2">
-                <span className="text-sm font-bold text-[var(--sea-ink)]">{rounded}g</span>
-                {goal ? (
-                  <span className="text-[9px] leading-tight" style={{ color: isOver ? 'var(--macro-over)' : 'var(--sea-ink-soft)' }}>
-                    / {goal}g {label}
-                  </span>
-                ) : (
-                  <span className="text-[10px] leading-tight text-[var(--sea-ink-soft)]">{label}</span>
-                )}
-                {pct !== null && (
-                  <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-[var(--line)]">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{ width: `${pct}%`, backgroundColor: isOver ? 'var(--macro-over)' : color }}
-                    />
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Per-meal-tag breakdown */}
-        {tagGroups.size > 0 && (
-          <div className="flex gap-4">
-            {[...tagGroups.entries()].map(([tag, cals]) => (
-              <div key={tag} className="flex flex-col items-center gap-0.5">
-                <span className="text-lg">{MEAL_TAG_EMOJI[tag]}</span>
-                <span className="text-xs font-semibold text-[var(--sea-ink)]">
-                  {Math.round(cals)}
-                </span>
-                <span className="text-xs text-[var(--sea-ink-soft)]">{MEAL_TAG_LABEL[tag]}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <DailySummaryCard
+        dateLabel={formatDateLabel(currentDate)}
+        onPrevDay={handlePrevDay}
+        onNextDay={handleNextDay}
+        isToday={isToday}
+        streak={streak}
+        totalCalories={totalCalories}
+        totalProtein={totalProtein}
+        totalCarbs={totalCarbs}
+        totalFat={totalFat}
+        totalFiber={totalFiber}
+        settings={settings}
+        tagGroups={tagGroups}
+      />
 
       {/* Meals list */}
       {meals.length === 0 ? (
@@ -297,5 +199,140 @@ function HomePage() {
 
     </div>
     </PullToRefresh>
+  )
+}
+
+// ── Extracted components ──
+
+interface DailySummaryCardProps {
+  dateLabel: string
+  onPrevDay: () => void
+  onNextDay: () => void
+  isToday: boolean
+  streak: number
+  totalCalories: number
+  totalProtein: number
+  totalCarbs: number
+  totalFat: number
+  totalFiber: number
+  settings: { dailyCalorieGoal: number; proteinGoal: number | null; carbsGoal: number | null; fatGoal: number | null; fiberGoal: number | null }
+  tagGroups: Map<MealTag, number>
+}
+
+function DailySummaryCard({
+  dateLabel, onPrevDay, onNextDay, isToday, streak,
+  totalCalories, totalProtein, totalCarbs, totalFat, totalFiber,
+  settings, tagGroups,
+}: DailySummaryCardProps) {
+  const isOverGoal = totalCalories > settings.dailyCalorieGoal
+  const progressPercent = Math.min((totalCalories / settings.dailyCalorieGoal) * 100, 100)
+  const overBy = Math.round(totalCalories - settings.dailyCalorieGoal)
+  const remaining = Math.round(settings.dailyCalorieGoal - totalCalories)
+
+  const macros = [
+    { label: 'Protein', value: totalProtein, goal: settings.proteinGoal, color: 'var(--macro-protein)' },
+    { label: 'Carbs',   value: totalCarbs,   goal: settings.carbsGoal,   color: 'var(--macro-carbs)' },
+    { label: 'Fat',     value: totalFat,     goal: settings.fatGoal,     color: 'var(--macro-fat)' },
+    { label: 'Fiber',   value: totalFiber,   goal: settings.fiberGoal,  color: 'var(--macro-fiber)' },
+  ]
+
+  return (
+    <div className="island-shell rise-in mb-6 rounded-2xl p-5">
+      {/* Header: date nav + streak */}
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onPrevDay}
+            aria-label="Previous day"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--sea-ink-soft)] transition hover:bg-[var(--chip-bg)] hover:text-[var(--sea-ink)]"
+          >
+            <ChevronLeft size={16} strokeWidth={2.5} />
+          </button>
+          <h2 className="text-base font-bold text-[var(--sea-ink)]">{dateLabel}</h2>
+          <button
+            type="button"
+            onClick={onNextDay}
+            disabled={isToday}
+            aria-label="Next day"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--sea-ink-soft)] transition hover:bg-[var(--chip-bg)] hover:text-[var(--sea-ink)] disabled:opacity-30"
+          >
+            <ChevronRight size={16} strokeWidth={2.5} />
+          </button>
+        </div>
+        {streak > 0 && isToday && (
+          <span className="flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-semibold text-orange-500 dark:bg-orange-950 dark:text-orange-400">
+            🔥 {streak} day{streak !== 1 ? 's' : ''}
+          </span>
+        )}
+      </div>
+
+      {/* Calorie progress */}
+      <div className="mb-1 flex items-end gap-2">
+        <span className={`text-4xl font-bold ${isOverGoal ? 'text-orange-500 dark:text-orange-400' : 'text-[var(--sea-ink)]'}`}>
+          {Math.round(totalCalories)}
+        </span>
+        <span className="mb-1 text-sm text-[var(--sea-ink-soft)]">/ {settings.dailyCalorieGoal} kcal</span>
+      </div>
+      {isOverGoal ? (
+        <p role="alert" className="mb-2 text-xs font-medium text-orange-500 dark:text-orange-400">
+          {overBy} kcal over your daily goal
+        </p>
+      ) : (
+        <p className="mb-2 text-xs text-[var(--sea-ink-soft)]">
+          {remaining} kcal remaining
+        </p>
+      )}
+      <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-[var(--line)]">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${isOverGoal ? 'bg-orange-400' : 'bg-[var(--lagoon-deep)]'}`}
+          style={{ width: `${progressPercent}%` }}
+        />
+      </div>
+
+      {/* Macro totals */}
+      <div className="mb-4 grid grid-cols-4 gap-2">
+        {macros.map(({ label, value, goal, color }) => {
+          const rounded = Math.round(value * 10) / 10
+          const pct = goal ? Math.min((value / goal) * 100, 100) : null
+          const isOver = goal !== null && value > goal
+          return (
+            <div key={label} className="flex flex-col rounded-xl bg-[var(--chip-bg)] px-2 py-2">
+              <span className="text-sm font-bold text-[var(--sea-ink)]">{rounded}g</span>
+              {goal ? (
+                <span className="text-[9px] leading-tight" style={{ color: isOver ? 'var(--macro-over)' : 'var(--sea-ink-soft)' }}>
+                  / {goal}g {label}
+                </span>
+              ) : (
+                <span className="text-[10px] leading-tight text-[var(--sea-ink-soft)]">{label}</span>
+              )}
+              {pct !== null && (
+                <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-[var(--line)]">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${pct}%`, backgroundColor: isOver ? 'var(--macro-over)' : color }}
+                  />
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Per-meal-tag breakdown */}
+      {tagGroups.size > 0 && (
+        <div className="flex gap-4">
+          {[...tagGroups.entries()].map(([tag, cals]) => (
+            <div key={tag} className="flex flex-col items-center gap-0.5">
+              <span className="text-lg">{MEAL_TAG_EMOJI[tag]}</span>
+              <span className="text-xs font-semibold text-[var(--sea-ink)]">
+                {Math.round(cals)}
+              </span>
+              <span className="text-xs text-[var(--sea-ink-soft)]">{MEAL_TAG_LABEL[tag]}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getMealsRangeFn } from "#/lib/server/meals";
 import { getUserSettingsFn } from "#/lib/server/settings";
 import { getClientTimezone } from "#/lib/timezone";
@@ -54,8 +54,10 @@ export function CalorieTrendChart() {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const fetchIdRef = useRef(0);
 
-  const fetchData = async (startDate: string, endDate: string) => {
+  const fetchData = useCallback(async (startDate: string, endDate: string) => {
+    const id = ++fetchIdRef.current;
     setIsLoading(true);
     setFetchError(null);
     try {
@@ -63,6 +65,8 @@ export function CalorieTrendChart() {
         getMealsRangeFn({ data: { startDate, endDate, timezone: tz } }),
         getUserSettingsFn(),
       ]);
+
+      if (id !== fetchIdRef.current) return; // stale response
 
       setGoal(settings.dailyCalorieGoal);
       setMacroGoals({
@@ -106,11 +110,12 @@ export function CalorieTrendChart() {
       setDays(sorted);
       setSelectedIdx(sorted.length - 1);
     } catch (err) {
+      if (id !== fetchIdRef.current) return; // stale error
       setFetchError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
-      setIsLoading(false);
+      if (id === fetchIdRef.current) setIsLoading(false);
     }
-  };
+  }, [tz]);
 
   useEffect(() => {
     if (period === "custom") return;
@@ -122,7 +127,7 @@ export function CalorieTrendChart() {
       start.toLocaleDateString("en-CA", { timeZone: tz }),
       end.toLocaleDateString("en-CA", { timeZone: tz }),
     );
-  }, [period]);
+  }, [period, fetchData]);
 
   const handleCustomFetch = () => {
     if (!customStart || !customEnd || customEnd < customStart) return;

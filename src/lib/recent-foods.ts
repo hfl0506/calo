@@ -105,14 +105,18 @@ export function removeRecentFood(name: string): void {
     )
     localStorage.setItem(STORAGE_KEY, JSON.stringify(foods))
     notifySubscribers()
-  } catch { /* ignore */ }
+  } catch (err) {
+    if (import.meta.env.DEV) console.warn('[recent-foods] removeRecentFood failed:', err)
+  }
 }
 
 export function clearRecentFoods(): void {
   try {
     localStorage.removeItem(STORAGE_KEY)
     notifySubscribers()
-  } catch { /* ignore */ }
+  } catch (err) {
+    if (import.meta.env.DEV) console.warn('[recent-foods] clearRecentFoods failed:', err)
+  }
 }
 
 // Returns the localStorage value on the client, empty array on the server.

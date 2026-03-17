@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useEffect, useReducer } from 'react'
+import { useEffect, useReducer, useRef } from 'react'
 import { ChevronLeft, Pencil, Trash2, X } from 'lucide-react'
 import { deleteMealFn, getMealDetailFn, updateMealFn } from '#/lib/server/meals'
 import { getCachedMealDetail, invalidateCachedMealDetail } from '#/lib/meal-prefetch-cache'
@@ -122,6 +122,8 @@ function detailReducer(state: DetailState, action: DetailAction): DetailState {
       return { ...state, showLightbox: action.show }
     case 'SET_ERROR':
       return { ...state, error: action.error }
+    default:
+      return state
   }
 }
 
@@ -352,52 +354,19 @@ function MealDetailPage() {
 
       {/* Image lightbox */}
       {showLightbox && meal?.imageUrl && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Meal image lightbox"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-          onClick={(e) => { if (e.target === e.currentTarget) dispatch({ type: 'TOGGLE_LIGHTBOX', show: false }) }}
-          onKeyDown={(e) => { if (e.key === 'Escape') dispatch({ type: 'TOGGLE_LIGHTBOX', show: false }) }}
-        >
-          <button
-            type="button"
-            onClick={() => dispatch({ type: 'TOGGLE_LIGHTBOX', show: false })}
-            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white transition hover:bg-black/70"
-            aria-label="Close"
-          >
-            <X size={24} />
-          </button>
-          <img src={meal.imageUrl} alt="Meal" className="max-h-[85vh] max-w-[90vw] rounded-lg object-contain" />
-        </div>
+        <LightboxModal
+          imageUrl={meal.imageUrl}
+          alt={MEAL_TAG_LABEL[meal.tag]}
+          onClose={() => dispatch({ type: 'TOGGLE_LIGHTBOX', show: false })}
+        />
       )}
 
       {/* Delete confirmation modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="island-shell rise-in mx-4 w-full max-w-sm rounded-2xl p-6">
-            <h3 className="mb-2 text-base font-bold text-[var(--sea-ink)]">Delete this meal?</h3>
-            <p className="mb-5 text-sm text-[var(--sea-ink-soft)]">
-              You can undo the deletion for 5 seconds after confirming.
-            </p>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => dispatch({ type: 'SHOW_DELETE_CONFIRM', show: false })}
-                className="flex-1 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] py-2.5 text-sm font-medium text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)]"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                className="flex-1 rounded-xl bg-red-500 py-2.5 text-sm font-semibold text-white transition hover:bg-red-600"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeleteConfirmModal
+          onCancel={() => dispatch({ type: 'SHOW_DELETE_CONFIRM', show: false })}
+          onConfirm={handleDelete}
+        />
       )}
 
       {/* Undo toast */}
@@ -408,6 +377,97 @@ function MealDetailPage() {
           onDismiss={() => void executeDelete()}
         />
       )}
+    </div>
+  )
+}
+
+// ── Focus-trapped modals ──
+
+function LightboxModal({ imageUrl, alt, onClose }: { imageUrl: string; alt: string; onClose: () => void }) {
+  const closeBtnRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    closeBtnRef.current?.focus()
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+      if (e.key === 'Tab') {
+        e.preventDefault()
+        closeBtnRef.current?.focus()
+      }
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [onClose])
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Meal image lightbox"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <button
+        ref={closeBtnRef}
+        type="button"
+        onClick={onClose}
+        className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white transition hover:bg-black/70"
+        aria-label="Close"
+      >
+        <X size={24} />
+      </button>
+      <img src={imageUrl} alt={alt} className="max-h-[85vh] max-w-[90vw] rounded-lg object-contain" />
+    </div>
+  )
+}
+
+function DeleteConfirmModal({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: () => void }) {
+  const cancelBtnRef = useRef<HTMLButtonElement>(null)
+  const confirmBtnRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    cancelBtnRef.current?.focus()
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel()
+      if (e.key === 'Tab') {
+        e.preventDefault()
+        if (document.activeElement === cancelBtnRef.current) {
+          confirmBtnRef.current?.focus()
+        } else {
+          cancelBtnRef.current?.focus()
+        }
+      }
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [onCancel])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div role="alertdialog" aria-modal="true" aria-label="Confirm meal deletion" className="island-shell rise-in mx-4 w-full max-w-sm rounded-2xl p-6">
+        <h3 className="mb-2 text-base font-bold text-[var(--sea-ink)]">Delete this meal?</h3>
+        <p className="mb-5 text-sm text-[var(--sea-ink-soft)]">
+          You can undo the deletion for 5 seconds after confirming.
+        </p>
+        <div className="flex gap-3">
+          <button
+            ref={cancelBtnRef}
+            type="button"
+            onClick={onCancel}
+            className="flex-1 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] py-2.5 text-sm font-medium text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)]"
+          >
+            Cancel
+          </button>
+          <button
+            ref={confirmBtnRef}
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 rounded-xl bg-red-500 py-2.5 text-sm font-semibold text-white transition hover:bg-red-600"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

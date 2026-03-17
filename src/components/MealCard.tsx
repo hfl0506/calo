@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Link } from '@tanstack/react-router'
 import { ChevronRight } from 'lucide-react'
 import { prefetchMealDetail } from '#/lib/meal-prefetch-cache'
@@ -15,7 +16,7 @@ interface MealCardProps {
   showChevron?: boolean
 }
 
-export function MealCard({ meal, showImage = false, imageLoading = 'lazy', showChevron = false }: MealCardProps) {
+export const MealCard = memo(function MealCard({ meal, showImage = false, imageLoading = 'lazy', showChevron = false }: MealCardProps) {
   return (
     <Link
       to="/history/$mealId"
@@ -65,4 +66,4 @@ export function MealCard({ meal, showImage = false, imageLoading = 'lazy', showC
       )}
     </Link>
   )
-}
+})

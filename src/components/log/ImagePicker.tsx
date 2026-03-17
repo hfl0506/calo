@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Camera, MessageSquare, Upload, Send } from 'lucide-react'
 
 export type ImageMimeType = 'image/jpeg' | 'image/png' | 'image/webp'
 
@@ -12,7 +13,10 @@ function compressImage(file: File): Promise<{ base64: string; mimeType: ImageMim
     const reader = new FileReader()
     reader.onload = (e) => {
       const result = e.target?.result
-      if (typeof result !== 'string') return
+      if (typeof result !== 'string') {
+        reject(new Error('Failed to read image as data URL'))
+        return
+      }
       const img = new Image()
       img.onload = () => {
         const canvas = document.createElement('canvas')
@@ -140,10 +144,7 @@ export default function ImagePicker({ onImage, onPrompt }: ImagePickerProps) {
               : 'text-[var(--sea-ink-soft)] hover:text-[var(--sea-ink)]'
           }`}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-            <circle cx="12" cy="13" r="3" />
-          </svg>
+          <Camera size={16} />
           Photo
         </button>
         <button
@@ -155,9 +156,7 @@ export default function ImagePicker({ onImage, onPrompt }: ImagePickerProps) {
               : 'text-[var(--sea-ink-soft)] hover:text-[var(--sea-ink)]'
           }`}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
+          <MessageSquare size={16} />
           Describe
         </button>
       </div>
@@ -171,21 +170,7 @@ export default function ImagePicker({ onImage, onPrompt }: ImagePickerProps) {
       )}
 
       <div className="island-shell flex h-40 w-full max-w-sm flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[var(--lagoon-deep)] p-6 text-center opacity-60">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="40"
-              height="40"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-[var(--lagoon-deep)]"
-            >
-              <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-              <circle cx="12" cy="13" r="3" />
-            </svg>
+            <Camera size={40} strokeWidth={1.5} className="text-[var(--lagoon-deep)]" />
             <p className="text-sm text-[var(--sea-ink-soft)]">Take or upload a photo of your meal</p>
           </div>
 
@@ -196,10 +181,7 @@ export default function ImagePicker({ onImage, onPrompt }: ImagePickerProps) {
               onClick={() => cameraInputRef.current?.click()}
               className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl bg-[var(--lagoon-deep)] px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-                <circle cx="12" cy="13" r="3" />
-              </svg>
+              <Camera size={18} />
               Take Photo
             </button>
 
@@ -209,11 +191,7 @@ export default function ImagePicker({ onImage, onPrompt }: ImagePickerProps) {
               onClick={() => uploadInputRef.current?.click()}
               className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--lagoon-deep)] bg-transparent px-4 py-3 text-sm font-semibold text-[var(--lagoon-deep)] transition hover:bg-[rgba(79,184,178,0.08)] disabled:opacity-60"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="17 8 12 3 7 8" />
-                <line x1="12" y1="3" x2="12" y2="15" />
-              </svg>
+              <Upload size={18} />
               Upload
             </button>
           </div>
@@ -240,10 +218,7 @@ export default function ImagePicker({ onImage, onPrompt }: ImagePickerProps) {
             onClick={handlePromptSubmit}
             className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-[var(--lagoon-deep)] px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="22" y1="2" x2="11" y2="13" />
-              <polygon points="22 2 15 22 11 13 2 9 22 2" />
-            </svg>
+            <Send size={18} />
             Analyze Meal
           </button>
 

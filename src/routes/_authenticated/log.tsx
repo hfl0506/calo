@@ -12,6 +12,7 @@ import { useRecentFoods, saveRecentFoods, recentFoodToAnalyzed } from '#/lib/rec
 import type { AnalyzedFood, MealTag } from '#/lib/types'
 import type { ImageMimeType } from '#/components/log/ImagePicker'
 import { generateId } from '#/lib/uuid'
+import { getClientTimezone } from '#/lib/timezone'
 import { RouteErrorBoundary } from '#/components/RouteErrorBoundary'
 import { AlertTriangle, X } from 'lucide-react'
 
@@ -46,6 +47,7 @@ type LogAction =
   | { type: 'ANALYSIS_ERROR'; error: string }
   | { type: 'SET_FOODS'; foods: AnalyzedFood[] }
   | { type: 'SET_FOODS_FROM_RECENT'; foods: AnalyzedFood[] }
+  | { type: 'SET_ERROR'; error: string }
   | { type: 'CLEAR_ERROR' }
 
 const initialState: LogState = {
@@ -82,8 +84,12 @@ function logReducer(state: LogState, action: LogAction): LogState {
       return { ...state, foods: action.foods }
     case 'SET_FOODS_FROM_RECENT':
       return { ...state, step: 'review', foods: action.foods }
+    case 'SET_ERROR':
+      return { ...state, error: action.error }
     case 'CLEAR_ERROR':
       return { ...state, error: null }
+    default:
+      return state
   }
 }
 
@@ -164,14 +170,17 @@ function LogMealPage() {
       dispatch({ type: 'SET_FOODS', foods: updatedFoods })
       setAdjustmentPrompt('')
     } catch (err) {
-      console.error('Failed to adjust:', err)
+      dispatch({
+        type: 'SET_ERROR',
+        error: err instanceof Error ? err.message : 'Failed to adjust nutrition. Please try again.',
+      })
     } finally {
       setIsAdjusting(false)
     }
   }
 
   const uploadImageToR2 = async (base64: string, mimeType: ImageMimeType): Promise<string | null> => {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const tz = getClientTimezone()
     const date = new Date().toLocaleDateString('en-CA', { timeZone: tz })
     const fileName = `meal_${generateId()}`
     const { presignedUrl, publicUrl } = await getMealUploadUrlFn({
