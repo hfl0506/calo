@@ -32,6 +32,7 @@ export const Route = createFileRoute('/_authenticated/')({
   },
   pendingComponent: HomeSkeleton,
   pendingMs: 0,
+  staleTime: 30_000,
   component: HomePage,
   errorComponent: ({ error, reset }) => <RouteErrorBoundary error={error} reset={reset} />,
 })

@@ -15,6 +15,7 @@ export default function BottomNav() {
         {/* Home */}
         <Link
           to="/"
+          preload="viewport"
           className={`flex flex-col items-center gap-0.5 px-6 py-1 transition ${
             isHome
               ? 'text-[var(--lagoon-deep)]'
@@ -30,6 +31,7 @@ export default function BottomNav() {
         {/* History */}
         <Link
           to="/history"
+          preload="viewport"
           className={`flex flex-col items-center gap-0.5 px-6 py-1 transition ${
             isHistory
               ? 'text-[var(--lagoon-deep)]'
@@ -45,6 +47,7 @@ export default function BottomNav() {
         {/* Settings */}
         <Link
           to="/settings"
+          preload="viewport"
           className={`flex flex-col items-center gap-0.5 px-6 py-1 transition ${
             isSettings
               ? 'text-[var(--lagoon-deep)]'

@@ -36,6 +36,7 @@ export const Route = createFileRoute('/_authenticated/history/')({
     </div>
   ),
   pendingMs: 0,
+  staleTime: 30_000,
   component: HistoryPage,
   errorComponent: ({ error, reset }) => <RouteErrorBoundary error={error} reset={reset} />,
 })

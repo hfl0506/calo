@@ -38,7 +38,6 @@ async function queryUsda(query: string): Promise<UsdaSearchResponse> {
   const timeout = setTimeout(() => controller.abort(), 5000);
 
   try {
-    console.log(`[USDA API] Querying: "${query}"`);
     const res = await fetch(usdaUrl!, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -51,13 +50,10 @@ async function queryUsda(query: string): Promise<UsdaSearchResponse> {
     });
 
     if (!res.ok) {
-      console.error(`[USDA API] Error: ${res.status} ${res.statusText}`);
       throw new Error(`USDA API error: ${res.status}`);
     }
 
-    const data = (await res.json()) as UsdaSearchResponse;
-    console.log(`[USDA API] Got ${data.foods.length} result(s) for "${query}"`);
-    return data;
+    return (await res.json()) as UsdaSearchResponse;
   } finally {
     clearTimeout(timeout);
   }
@@ -74,7 +70,7 @@ function reconcileNutrition(
   }
 
   // USDA nutrients are per 100g — scale to Gemini's estimated portion weight
-  const scale = (geminiFood.estimatedWeightGrams ?? 100) / 100;
+  const scale = geminiFood.estimatedWeightGrams! / 100;
   const get = (id: number) => Math.round((nutrientMap.get(id) ?? 0) * scale * 10) / 10;
 
   return {
@@ -89,6 +85,11 @@ function reconcileNutrition(
 }
 
 async function enrichSingleFood(geminiFood: AnalyzedFood): Promise<AnalyzedFood> {
+  // Without a weight estimate we can't scale per-100g USDA data — keep Gemini's values
+  if (!geminiFood.estimatedWeightGrams) {
+    return { ...geminiFood, nutritionSource: "gemini" };
+  }
+
   const query = geminiFood.portionDescription
     ? `${geminiFood.portionDescription} ${geminiFood.name}`
     : geminiFood.name;
@@ -118,7 +119,6 @@ export async function enrichWithNutritionAPI(
       if (result.status === "fulfilled") {
         results[i + j] = result.value;
       } else {
-        console.error(`[USDA API] Failed for "${batch[j].name}":`, result.reason);
         results[i + j] = { ...batch[j], nutritionSource: "gemini" as const };
       }
     }
