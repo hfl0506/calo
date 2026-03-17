@@ -37,6 +37,10 @@ export function clearPrefetchCache(): void {
   }
 }
 
+export function invalidateCachedMealDetail(mealId: string): void {
+  cache.delete(mealId)
+}
+
 export function getCachedMealDetail(mealId: string) {
   const entry = cache.get(mealId)
   if (!entry) return null

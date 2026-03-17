@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { ChevronLeft, Pencil, Trash2, X } from 'lucide-react'
 import { deleteMealFn, getMealDetailFn, updateMealFn } from '#/lib/server/meals'
-import { getCachedMealDetail } from '#/lib/meal-prefetch-cache'
+import { getCachedMealDetail, invalidateCachedMealDetail } from '#/lib/meal-prefetch-cache'
 import { MealDetailSkeleton } from '#/components/SkeletonCard'
 import FoodReviewList from '#/components/log/FoodReviewList'
 import NutritionSummaryBar from '#/components/log/NutritionSummaryBar'
@@ -78,7 +79,7 @@ function MealDetailPage() {
           foods: editFoods,
         },
       })
-      // Refetch updated meal
+      invalidateCachedMealDetail(mealId)
       const updated = await getMealDetailFn({ data: { mealId } })
       setMeal(updated)
       setIsEditing(false)
@@ -92,6 +93,7 @@ function MealDetailPage() {
   const executeDelete = async () => {
     try {
       await deleteMealFn({ data: { mealId } })
+      invalidateCachedMealDetail(mealId)
       await navigate({ to: '/history' })
     } catch (err) {
       setShowUndoToast(false)
@@ -115,9 +117,7 @@ function MealDetailPage() {
             className="flex h-9 w-9 items-center justify-center rounded-xl text-[var(--sea-ink-soft)] transition hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)]"
             aria-label="Back"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
+            <ChevronLeft size={20} />
           </Link>
           <h1 className="text-xl font-bold text-[var(--sea-ink)]">
             {isEditing ? 'Edit Meal' : 'Meal Detail'}
@@ -132,10 +132,7 @@ function MealDetailPage() {
               className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)] transition hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)]"
               aria-label="Edit meal"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-              </svg>
+              <Pencil size={16} />
             </button>
             <button
               type="button"
@@ -143,11 +140,7 @@ function MealDetailPage() {
               className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-500 text-white transition hover:bg-red-600"
               aria-label="Delete meal"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                <line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" />
-              </svg>
+              <Trash2 size={18} />
             </button>
           </div>
         )}
@@ -303,9 +296,7 @@ function MealDetailPage() {
             className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white transition hover:bg-black/70"
             aria-label="Close"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+            <X size={24} />
           </button>
           <img src={meal.imageUrl} alt="Meal" className="max-h-[85vh] max-w-[90vw] rounded-lg object-contain" />
         </div>
@@ -350,4 +341,3 @@ function MealDetailPage() {
     </div>
   )
 }
-

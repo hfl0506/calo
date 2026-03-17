@@ -2,14 +2,15 @@ import { createFileRoute, Link, useNavigate, useRouter } from '@tanstack/react-r
 import { useEffect, useMemo, useState } from 'react'
 import { z } from 'zod'
 import PullToRefresh from 'react-simple-pull-to-refresh'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { getMealsByDateFn, getStreakFn } from '#/lib/server/meals'
 import { getUserSettingsFn } from '#/lib/server/settings'
-import { prefetchMealDetail } from '#/lib/meal-prefetch-cache'
 import { HomeSkeleton } from '#/components/SkeletonCard'
-import { formatTime } from '#/lib/format'
+import { MealCard } from '#/components/MealCard'
 import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
 import type { MealTag } from '#/lib/types'
 import { RouteErrorBoundary } from '#/components/RouteErrorBoundary'
+import { LoadingSpinner } from '#/components/LoadingSpinner'
 
 const homeSearchSchema = z.object({
   date: z.string().optional(),
@@ -47,7 +48,6 @@ function formatDateLabel(dateStr: string): string {
 
   if (dateStr === today) return "Today's Summary"
   if (dateStr === yesterdayStr) return "Yesterday's Summary"
-  // Format as "Mon, Mar 15"
   const [year, month, day] = dateStr.split('-').map(Number)
   const d = new Date(year, month - 1, day)
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
@@ -123,13 +123,13 @@ function HomePage() {
   return (
     <PullToRefresh onRefresh={handleRefresh} pullingContent="" refreshingContent={
       <div className="flex justify-center py-3">
-        <div role="status" aria-label="Refreshing" className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent" />
+        <LoadingSpinner size="md" label="Refreshing" />
       </div>
     }>
     <div className="px-4 py-6 pb-24">
       {isSaving && (
         <div role="status" className="rise-in mb-4 flex items-center gap-3 rounded-xl border border-[var(--lagoon-deep)] bg-[rgba(79,184,178,0.08)] px-4 py-3">
-          <div aria-hidden="true" className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent" />
+          <LoadingSpinner size="sm" />
           <p className="text-sm font-medium text-[var(--lagoon-deep)]">Saving your meal…</p>
         </div>
       )}
@@ -158,9 +158,7 @@ function HomePage() {
               aria-label="Previous day"
               className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--sea-ink-soft)] transition hover:bg-[var(--chip-bg)] hover:text-[var(--sea-ink)]"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
+              <ChevronLeft size={16} strokeWidth={2.5} />
             </button>
             <h2 className="text-base font-bold text-[var(--sea-ink)]">{formatDateLabel(currentDate)}</h2>
             <button
@@ -170,9 +168,7 @@ function HomePage() {
               aria-label="Next day"
               className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--sea-ink-soft)] transition hover:bg-[var(--chip-bg)] hover:text-[var(--sea-ink)] disabled:opacity-30"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
+              <ChevronRight size={16} strokeWidth={2.5} />
             </button>
           </div>
           {streak > 0 && isToday && (
@@ -289,50 +285,12 @@ function HomePage() {
             {isToday ? "Today's meals" : 'Meals'}
           </h2>
           {meals.map((meal, i) => (
-            <Link
+            <MealCard
               key={meal.id}
-              to="/history/$mealId"
-              params={{ mealId: meal.id }}
-              className="island-shell block overflow-hidden rounded-2xl transition hover:shadow-lg"
-              onMouseEnter={() => prefetchMealDetail(meal.id)}
-              onTouchStart={() => prefetchMealDetail(meal.id)}
-            >
-              {meal.imageUrl && (
-                <img
-                  src={meal.imageUrl}
-                  alt={MEAL_TAG_LABEL[meal.tag]}
-                  className="h-36 w-full object-cover"
-                  loading={i === 0 ? 'eager' : 'lazy'}
-                  decoding="async"
-                  fetchPriority={i === 0 ? 'high' : 'low'}
-                />
-              )}
-              <div className="flex items-center gap-3 p-4">
-                <span className="text-2xl">{MEAL_TAG_EMOJI[meal.tag]}</span>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-[var(--sea-ink)]">
-                      {MEAL_TAG_LABEL[meal.tag]}
-                    </span>
-                    <span className="text-sm font-bold text-[var(--sea-ink)]">
-                      {Math.round(meal.totals.calories)} kcal
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-[var(--sea-ink-soft)]">
-                      {meal.foods
-                        .slice(0, 2)
-                        .map((f) => f.name)
-                        .join(', ')}
-                      {meal.foods.length > 2 ? ` +${meal.foods.length - 2} more` : ''}
-                    </span>
-                    <span className="text-xs text-[var(--sea-ink-soft)]">
-                      {formatTime(meal.loggedAt)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </Link>
+              meal={meal}
+              showImage
+              imageLoading={i === 0 ? 'eager' : 'lazy'}
+            />
           ))}
         </div>
       )}

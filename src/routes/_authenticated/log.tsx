@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useReducer, useState } from 'react'
 import AnalyzingScreen from '#/components/log/AnalyzingScreen'
 import FoodReviewList from '#/components/log/FoodReviewList'
 import ImagePicker from '#/components/log/ImagePicker'
@@ -13,85 +13,123 @@ import type { AnalyzedFood, MealTag } from '#/lib/types'
 import type { ImageMimeType } from '#/components/log/ImagePicker'
 import { generateId } from '#/lib/uuid'
 import { RouteErrorBoundary } from '#/components/RouteErrorBoundary'
+import { AlertTriangle, X } from 'lucide-react'
 
 const withIds = (foods: AnalyzedFood[]): AnalyzedFood[] =>
   foods.map((f) => ({ ...f, id: f.id ?? generateId() }))
 
 export const Route = createFileRoute('/_authenticated/log')({
+  loader: async () => {
+    const settings = await getUserSettingsFn()
+    return { dailyGoal: settings.dailyCalorieGoal }
+  },
   component: LogMealPage,
   errorComponent: ({ error, reset }) => <RouteErrorBoundary error={error} reset={reset} />,
 })
 
+// ── State machine ──
+
 type Step = 'pick' | 'analyzing' | 'review'
+
+interface LogState {
+  step: Step
+  foods: AnalyzedFood[]
+  error: string | null
+  imageData: { base64: string; mimeType: ImageMimeType } | null
+  retryData: { base64: string; mimeType: ImageMimeType } | null
+}
+
+type LogAction =
+  | { type: 'START_IMAGE_ANALYSIS'; base64: string; mimeType: ImageMimeType }
+  | { type: 'START_PROMPT_ANALYSIS' }
+  | { type: 'ANALYSIS_SUCCESS'; foods: AnalyzedFood[] }
+  | { type: 'ANALYSIS_ERROR'; error: string }
+  | { type: 'SET_FOODS'; foods: AnalyzedFood[] }
+  | { type: 'SET_FOODS_FROM_RECENT'; foods: AnalyzedFood[] }
+  | { type: 'CLEAR_ERROR' }
+
+const initialState: LogState = {
+  step: 'pick',
+  foods: [],
+  error: null,
+  imageData: null,
+  retryData: null,
+}
+
+function logReducer(state: LogState, action: LogAction): LogState {
+  switch (action.type) {
+    case 'START_IMAGE_ANALYSIS':
+      return {
+        ...state,
+        step: 'analyzing',
+        error: null,
+        imageData: { base64: action.base64, mimeType: action.mimeType },
+        retryData: { base64: action.base64, mimeType: action.mimeType },
+      }
+    case 'START_PROMPT_ANALYSIS':
+      return {
+        ...state,
+        step: 'analyzing',
+        error: null,
+        imageData: null,
+        retryData: null,
+      }
+    case 'ANALYSIS_SUCCESS':
+      return { ...state, step: 'review', foods: action.foods, error: null }
+    case 'ANALYSIS_ERROR':
+      return { ...state, step: 'pick', error: action.error }
+    case 'SET_FOODS':
+      return { ...state, foods: action.foods }
+    case 'SET_FOODS_FROM_RECENT':
+      return { ...state, step: 'review', foods: action.foods }
+    case 'CLEAR_ERROR':
+      return { ...state, error: null }
+  }
+}
+
+// ── Component ──
 
 function LogMealPage() {
   const navigate = useNavigate()
-  const [step, setStep] = useState<Step>('pick')
-  const [foods, setFoods] = useState<AnalyzedFood[]>([])
+  const { dailyGoal } = Route.useLoaderData()
+  const [state, dispatch] = useReducer(logReducer, initialState)
   const [tag, setTag] = useState<MealTag>('lunch')
-  const [error, setError] = useState<string | null>(null)
-  const [retryData, setRetryData] = useState<{ base64: string; mimeType: ImageMimeType } | null>(null)
-  const [imageData, setImageData] = useState<{ base64: string; mimeType: ImageMimeType } | null>(null)
   const recentFoods = useRecentFoods()
   const [notes, setNotes] = useState('')
   const [loggedAt, setLoggedAt] = useState('')
   const [adjustmentPrompt, setAdjustmentPrompt] = useState('')
   const [isAdjusting, setIsAdjusting] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [dailyGoal, setDailyGoal] = useState<number | null>(null)
 
-  // Fetch daily goal once so we can warn if the review total exceeds it
-  useEffect(() => {
-    getUserSettingsFn().then((s) => setDailyGoal(s.dailyCalorieGoal)).catch((err) => {
-      console.warn('[log] Failed to fetch daily goal:', err)
-    })
-  }, [])
+  const { step, foods, error, imageData, retryData } = state
 
   const handleImage = async (base64: string, mimeType: ImageMimeType) => {
-    setRetryData({ base64, mimeType })
-    setImageData({ base64, mimeType })
-    setError(null)
-    setStep('analyzing')
+    dispatch({ type: 'START_IMAGE_ANALYSIS', base64, mimeType })
 
     try {
       const result = await analyzeImageFn({
         data: { imageBase64: base64, mimeType },
       })
-
-      if (result.error && result.foods.length === 0) {
-        setError(result.error)
-        setStep('pick')
-        return
-      }
-
-      setFoods(withIds(result.foods))
-      setStep('review')
-    } catch {
-      setError('Failed to analyze image. Please try again.')
-      setStep('pick')
+      dispatch({ type: 'ANALYSIS_SUCCESS', foods: withIds(result.foods) })
+    } catch (err) {
+      dispatch({
+        type: 'ANALYSIS_ERROR',
+        error: err instanceof Error ? err.message : 'Failed to analyze image. Please try again.',
+      })
     }
   }
 
   const handlePrompt = async (prompt: string) => {
-    setError(null)
-    setImageData(null)
-    setRetryData(null)
-    setStep('analyzing')
+    dispatch({ type: 'START_PROMPT_ANALYSIS' })
 
     try {
       const result = await analyzePromptFn({ data: { prompt } })
-
-      if (result.error && result.foods.length === 0) {
-        setError(result.error)
-        setStep('pick')
-        return
-      }
-
-      setFoods(withIds(result.foods))
-      setStep('review')
-    } catch {
-      setError('Failed to analyze your description. Please try again.')
-      setStep('pick')
+      dispatch({ type: 'ANALYSIS_SUCCESS', foods: withIds(result.foods) })
+    } catch (err) {
+      dispatch({
+        type: 'ANALYSIS_ERROR',
+        error: err instanceof Error ? err.message : 'Failed to analyze your description. Please try again.',
+      })
     }
   }
 
@@ -123,7 +161,7 @@ function LogMealPage() {
           return food
         }),
       )
-      setFoods(updatedFoods)
+      dispatch({ type: 'SET_FOODS', foods: updatedFoods })
       setAdjustmentPrompt('')
     } catch (err) {
       console.error('Failed to adjust:', err)
@@ -181,7 +219,6 @@ function LogMealPage() {
         imageUrl = url ?? undefined
       }
 
-      // Convert datetime-local value (no tz) to ISO string in user's local timezone
       let loggedAtISO: string | undefined
       if (loggedAt) {
         loggedAtISO = new Date(loggedAt).toISOString()
@@ -216,20 +253,7 @@ function LogMealPage() {
           className="flex h-9 w-9 items-center justify-center rounded-xl text-[var(--sea-ink-soft)] transition hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)]"
           aria-label="Cancel"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
+          <X size={20} />
         </button>
       </div>
 
@@ -269,8 +293,7 @@ function LogMealPage() {
                       key={f.name}
                       type="button"
                       onClick={() => {
-                        setFoods([recentFoodToAnalyzed(f)])
-                        setStep('review')
+                        dispatch({ type: 'SET_FOODS_FROM_RECENT', foods: [recentFoodToAnalyzed(f)] })
                       }}
                       className="flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--chip-bg)] px-3 py-1.5 text-xs font-medium text-[var(--sea-ink)] transition hover:border-[var(--lagoon-deep)] hover:text-[var(--lagoon-deep)]"
                     >
@@ -290,11 +313,9 @@ function LogMealPage() {
           <div className="rise-in space-y-4 pb-28">
             <NutritionSummaryBar foods={foods} />
 
-            {dailyGoal !== null && foods.reduce((s, f) => s + f.calories, 0) > dailyGoal && (
+            {foods.reduce((s, f) => s + f.calories, 0) > dailyGoal && (
               <div role="alert" className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900 dark:bg-amber-950">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-amber-500">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
-                </svg>
+                <AlertTriangle size={16} className="shrink-0 text-amber-500" />
                 <p className="text-xs text-amber-700 dark:text-amber-300">
                   This meal exceeds your daily goal of {dailyGoal} kcal
                 </p>
@@ -362,7 +383,7 @@ function LogMealPage() {
               <h2 className="px-1 text-sm font-semibold text-[var(--sea-ink)]">
                 Foods ({foods.length})
               </h2>
-              <FoodReviewList foods={foods} onChange={setFoods} />
+              <FoodReviewList foods={foods} onChange={(f) => dispatch({ type: 'SET_FOODS', foods: f })} />
             </div>
           </div>
         )}

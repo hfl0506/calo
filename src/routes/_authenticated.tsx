@@ -1,34 +1,22 @@
-import { Link, Outlet, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { Link, Outlet, createFileRoute, redirect } from "@tanstack/react-router";
+import { Plus } from "lucide-react";
 import BottomNav from "../components/BottomNav";
-import { authClient } from "#/lib/auth-client";
+import { getSession } from "#/lib/server/session";
 import { RouteErrorBoundary } from "#/components/RouteErrorBoundary";
 
 export const Route = createFileRoute("/_authenticated")({
+  beforeLoad: async () => {
+    const session = await getSession();
+    if (!session) {
+      throw redirect({ to: "/sign-in" });
+    }
+    return { session };
+  },
   component: AuthenticatedLayout,
   errorComponent: ({ error, reset }) => <RouteErrorBoundary error={error} reset={reset} />,
 });
 
 function AuthenticatedLayout() {
-  const { data: session, isPending } = authClient.useSession();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!isPending && !session) {
-      void navigate({ to: "/sign-in" });
-    }
-  }, [session, isPending, navigate]);
-
-  if (isPending) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent" />
-      </div>
-    );
-  }
-
-  if (!session) return null;
-
   return (
     <div className="flex min-h-screen flex-col">
       <main className="flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))]">
@@ -41,20 +29,7 @@ function AuthenticatedLayout() {
         className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--lagoon-deep)] text-white shadow-xl transition hover:opacity-90 hover:shadow-2xl"
         aria-label="Log meal"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="28"
-          height="28"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
+        <Plus size={28} strokeWidth={2.5} />
       </Link>
 
       <BottomNav />

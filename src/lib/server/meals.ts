@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { eq, and, gte, lt } from "drizzle-orm";
+import { eq, and, gte, lt, sql } from "drizzle-orm";
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { z } from "zod";
 import { db } from "#/db";
@@ -17,34 +17,37 @@ import {
   generateAndParse,
   generateAndParseWithNotFoodGuard,
 } from "#/lib/server/gemini";
+import { AppError } from "#/lib/server/errors";
 
 import type { AnalyzedFood, Meal } from "#/lib/types";
 import { localDateToUTC } from "#/lib/timezone";
 import { env } from "#/lib/env";
 import { ANALYZE_TEXT_PROMPT, ANALYZE_IMAGE_PROMPT, RECALCULATE_PROMPT } from "#/lib/server/prompts";
 
-function rateLimitMessage(err: unknown): string {
-  const ms = err instanceof RateLimiterRes ? err.msBeforeNext : 60000
-  const secs = Math.ceil(ms / 1000)
-  return `Too many requests. Please try again in ${secs} second${secs !== 1 ? "s" : ""}.`
+function throwRateLimitError(err: unknown): never {
+  const ms = err instanceof RateLimiterRes ? err.msBeforeNext : 60000;
+  const secs = Math.ceil(ms / 1000);
+  throw new AppError(
+    'RATE_LIMITED',
+    `Too many requests. Please try again in ${secs} second${secs !== 1 ? "s" : ""}.`,
+    ms,
+  );
 }
-
-const EMPTY_FOODS: AnalyzedFood[] = [];
 
 const timezoneSchema = z.string().refine(
   (tz) => { try { Intl.DateTimeFormat(undefined, { timeZone: tz }); return true } catch { return false } },
   { message: "Invalid timezone" }
-)
+);
 
 async function resolveTimezone(fallbackTz?: string): Promise<string> {
-  if (fallbackTz) return fallbackTz
+  if (fallbackTz) return fallbackTz;
   try {
-    const req = getRequest()
-    const cookieHeader = req.headers.get("cookie") ?? ""
-    const tzCookie = cookieHeader.split(";").map((c) => c.trim()).find((c) => c.startsWith("tz="))
-    if (tzCookie) return decodeURIComponent(tzCookie.slice(3))
+    const req = getRequest();
+    const cookieHeader = req.headers.get("cookie") ?? "";
+    const tzCookie = cookieHeader.split(";").map((c) => c.trim()).find((c) => c.startsWith("tz="));
+    if (tzCookie) return decodeURIComponent(tzCookie.slice(3));
   } catch { /* client navigation: no server request context */ }
-  return Intl.DateTimeFormat().resolvedOptions().timeZone
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
 // Zod schemas for validating Gemini JSON responses
@@ -75,51 +78,51 @@ export const recalculateNutritionFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => recalculateSchema.parse(data))
   .handler(async ({ data }) => {
     const session = await getSession();
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new AppError('UNAUTHORIZED', 'Unauthorized');
 
     try {
       await recalculateRateLimiter.consume(session.user.id);
     } catch (err) {
-      return { error: rateLimitMessage(err) };
+      throwRateLimitError(err);
     }
 
     const prompt = RECALCULATE_PROMPT(data.originalName, data.portionDescription ?? "standard serving", data.adjustmentPrompt);
 
-    const result = await generateAndParse(prompt, analyzedFoodSchema)
-    if (result.isErr()) return { error: "Failed to recalculate nutrition" }
-    return { food: result.value }
+    const result = await generateAndParse(prompt, analyzedFoodSchema);
+    if (result.isErr()) throw new AppError('ANALYSIS_FAILED', 'Failed to recalculate nutrition');
+    return { food: result.value };
   });
 
 export const analyzePromptFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => analyzePromptSchema.parse(data))
-  .handler(async ({ data }) => {
+  .handler(async ({ data }): Promise<{ foods: AnalyzedFood[] }> => {
     const session = await getSession();
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new AppError('UNAUTHORIZED', 'Unauthorized');
 
     try {
       await analyzeRateLimiter.consume(session.user.id);
     } catch (err) {
-      return { foods: EMPTY_FOODS, error: rateLimitMessage(err) };
+      throwRateLimitError(err);
     }
 
     const result = await generateAndParseWithNotFoodGuard(
       ANALYZE_TEXT_PROMPT(data.prompt),
       analyzedFoodsArraySchema,
-    )
+    );
 
     if (result.isErr()) {
-      const err = result.error
+      const err = result.error;
       if (err.type === 'not_food') {
-        return { foods: EMPTY_FOODS, error: "Please describe a food or meal. I can only help with food-related prompts." }
+        throw new AppError('NOT_FOOD', 'Please describe a food or meal. I can only help with food-related prompts.');
       }
-      return { foods: EMPTY_FOODS, error: "Failed to analyze your description. Please try again." }
+      throw new AppError('ANALYSIS_FAILED', 'Failed to analyze your description. Please try again.');
     }
 
     if (result.value.length === 0) {
-      return { foods: EMPTY_FOODS, error: 'No food items detected. Try describing what you ate, e.g. "a bowl of rice with grilled chicken".' }
+      throw new AppError('NO_ITEMS', 'No food items detected. Try describing what you ate, e.g. "a bowl of rice with grilled chicken".');
     }
 
-    return { foods: result.value }
+    return { foods: result.value };
   });
 
 const analyzeImageSchema = z.object({
@@ -129,29 +132,29 @@ const analyzeImageSchema = z.object({
 
 export const analyzeImageFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => analyzeImageSchema.parse(data))
-  .handler(async ({ data }) => {
+  .handler(async ({ data }): Promise<{ foods: AnalyzedFood[] }> => {
     const session = await getSession();
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new AppError('UNAUTHORIZED', 'Unauthorized');
 
     try {
       await analyzeRateLimiter.consume(session.user.id);
     } catch (err) {
-      return { foods: EMPTY_FOODS, error: rateLimitMessage(err) };
+      throwRateLimitError(err);
     }
 
-    const imagePart = { inlineData: { data: data.imageBase64, mimeType: data.mimeType } }
-    const result = await generateAndParse([ANALYZE_IMAGE_PROMPT, imagePart], analyzedFoodsArraySchema)
+    const imagePart = { inlineData: { data: data.imageBase64, mimeType: data.mimeType } };
+    const result = await generateAndParse([ANALYZE_IMAGE_PROMPT, imagePart], analyzedFoodsArraySchema);
 
     if (result.isErr()) {
-      console.error("[analyzeImageFn] Gemini error:", result.error)
-      return { foods: EMPTY_FOODS, error: "Failed to analyze image. Please try again." }
+      console.error("[analyzeImageFn] Gemini error:", result.error);
+      throw new AppError('ANALYSIS_FAILED', 'Failed to analyze image. Please try again.');
     }
 
     if (result.value.length === 0) {
-      return { foods: EMPTY_FOODS, error: "No food items detected in the image" }
+      throw new AppError('NO_ITEMS', 'No food items detected in the image');
     }
 
-    return { foods: result.value }
+    return { foods: result.value };
   });
 
 const finiteNonNegative = z.number().finite().nonnegative();
@@ -181,7 +184,7 @@ export const saveMealFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => saveMealSchema.parse(data))
   .handler(async ({ data }) => {
     const session = await getSession();
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new AppError('UNAUTHORIZED', 'Unauthorized');
 
     const loggedAt = data.loggedAt ? new Date(data.loggedAt) : new Date();
 
@@ -227,15 +230,13 @@ export const getMealsByDateFn = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) => getMealsByDateSchema.parse(data))
   .handler(async ({ data }) => {
     const session = await getSession();
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new AppError('UNAUTHORIZED', 'Unauthorized');
 
-    // Resolve timezone: explicit arg > tz cookie > Intl (correct on client, UTC on server)
     const tz = await resolveTimezone(data.timezone);
 
     const dateStr =
-      data.date ?? new Date().toLocaleDateString("en-CA", { timeZone: tz }); // YYYY-MM-DD in user's tz
+      data.date ?? new Date().toLocaleDateString("en-CA", { timeZone: tz });
 
-    // Build start/end of the calendar day in the user's timezone
     const startDate = localDateToUTC(`${dateStr}T00:00:00`, tz);
     const endDate = localDateToUTC(`${dateStr}T23:59:59.999`, tz);
 
@@ -270,7 +271,7 @@ export const getMealsRangeFn = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) => getMealsRangeSchema.parse(data))
   .handler(async ({ data }) => {
     const session = await getSession();
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new AppError('UNAUTHORIZED', 'Unauthorized');
 
     const tz = data.timezone ?? "UTC";
     const startDate = localDateToUTC(`${data.startDate}T00:00:00`, tz);
@@ -303,14 +304,14 @@ export const getMealDetailFn = createServerFn({ method: "GET" })
   .inputValidator((data: unknown) => getMealDetailSchema.parse(data))
   .handler(async ({ data }) => {
     const session = await getSession();
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new AppError('UNAUTHORIZED', 'Unauthorized');
 
     const meal = await db.query.meals.findFirst({
       where: and(eq(meals.id, data.mealId), eq(meals.userId, session.user.id)),
       with: { mealFoods: true },
     });
 
-    if (!meal) throw new Error("Meal not found");
+    if (!meal) throw new AppError('NOT_FOUND', 'Meal not found');
 
     const { mealFoods, ...mealData } = meal;
     return {
@@ -343,10 +344,9 @@ export const updateMealFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => updateMealSchema.parse(data))
   .handler(async ({ data }) => {
     const session = await getSession();
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new AppError('UNAUTHORIZED', 'Unauthorized');
 
     await db.transaction(async (tx) => {
-      // UPDATE ... RETURNING verifies ownership and updates in one query
       const updated = await tx
         .update(meals)
         .set({ notes: data.notes ?? null })
@@ -355,7 +355,7 @@ export const updateMealFn = createServerFn({ method: "POST" })
         )
         .returning({ id: meals.id });
 
-      if (!updated.length) throw new Error("Meal not found");
+      if (!updated.length) throw new AppError('NOT_FOUND', 'Meal not found');
 
       await tx.delete(mealFoods).where(eq(mealFoods.mealId, data.mealId));
 
@@ -379,34 +379,27 @@ export const updateMealFn = createServerFn({ method: "POST" })
 export const getStreakFn = createServerFn({ method: "GET" }).handler(
   async () => {
     const session = await getSession();
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new AppError('UNAUTHORIZED', 'Unauthorized');
 
     const tz = await resolveTimezone();
 
-    // Look back up to 365 days
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 365);
-
+    // Use SQL to get distinct dates directly instead of fetching all rows
     const rows = await db
-      .select({ loggedAt: meals.loggedAt })
+      .selectDistinct({
+        date: sql<string>`(${meals.loggedAt} AT TIME ZONE ${tz})::date::text`,
+      })
       .from(meals)
       .where(
-        and(eq(meals.userId, session.user.id), gte(meals.loggedAt, cutoff)),
-      )
-      .limit(2000); // safety cap: ~5 meals/day × 365 days
+        and(
+          eq(meals.userId, session.user.id),
+          gte(meals.loggedAt, sql`now() - interval '365 days'`),
+        ),
+      );
 
-    const datesWithMeals = new Set<string>();
-    for (const row of rows) {
-      if (row.loggedAt) {
-        datesWithMeals.add(
-          new Date(row.loggedAt).toLocaleDateString("en-CA", { timeZone: tz }),
-        );
-      }
-    }
+    const datesWithMeals = new Set(rows.map((r) => r.date));
 
     let streak = 0;
     const cur = new Date();
-    // If today has no meals, start checking from yesterday (streak can still be alive)
     const today = cur.toLocaleDateString("en-CA", { timeZone: tz });
     if (!datesWithMeals.has(today)) {
       cur.setDate(cur.getDate() - 1);
@@ -430,15 +423,14 @@ export const deleteMealFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => deleteMealSchema.parse(data))
   .handler(async ({ data }) => {
     const session = await getSession();
-    if (!session) throw new Error("Unauthorized");
+    if (!session) throw new AppError('UNAUTHORIZED', 'Unauthorized');
 
-    // DELETE ... RETURNING combines ownership check + delete into one round-trip
     const [deleted] = await db
       .delete(meals)
       .where(and(eq(meals.id, data.mealId), eq(meals.userId, session.user.id)))
       .returning({ imageUrl: meals.imageUrl });
 
-    if (!deleted) throw new Error("Meal not found");
+    if (!deleted) throw new AppError('NOT_FOUND', 'Meal not found');
 
     if (deleted.imageUrl) {
       const key = deleted.imageUrl.replace(`${env.R2_PUBLIC_URL}/`, "");

@@ -1,52 +1,75 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { LoadingSpinner } from '#/components/LoadingSpinner'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { getMealsRangeFn } from '#/lib/server/meals'
-import { prefetchMealDetail } from '#/lib/meal-prefetch-cache'
+import { MealCard } from '#/components/MealCard'
 import { HistorySkeleton } from '#/components/SkeletonCard'
-import { formatDate, formatTime } from '#/lib/format'
+import { formatDate } from '#/lib/format'
 import { roundMacro } from '#/lib/nutrition'
-import { MEAL_TAG_EMOJI, MEAL_TAG_LABEL } from '#/lib/types'
 import { CalorieTrendChart } from '#/components/CalorieTrendChart'
 import type { Meal } from '#/lib/types'
 import { groupMealsByDate } from '#/lib/meal-utils'
 import { RouteErrorBoundary } from '#/components/RouteErrorBoundary'
+import { PieChart } from 'lucide-react'
+
+const PAGE_DAYS = 7
+
+function getTz() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone
+}
 
 export const Route = createFileRoute('/_authenticated/history/')({
+  loader: async () => {
+    const tz = getTz()
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: tz })
+    const start = new Date()
+    start.setDate(start.getDate() - (PAGE_DAYS - 1))
+    const startDate = start.toLocaleDateString('en-CA', { timeZone: tz })
+
+    const allMeals = await getMealsRangeFn({ data: { startDate, endDate: today, timezone: tz } })
+    const grouped = groupMealsByDate(allMeals, tz)
+    return { initialMeals: grouped, oldestDate: startDate, hasMore: allMeals.length > 0 }
+  },
+  pendingComponent: () => (
+    <div className="px-4 py-6 pb-24">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-xl font-bold text-[var(--sea-ink)]">History</h1>
+      </div>
+      <HistorySkeleton />
+    </div>
+  ),
+  pendingMs: 0,
   component: HistoryPage,
   errorComponent: ({ error, reset }) => <RouteErrorBoundary error={error} reset={reset} />,
 })
 
 
-const PAGE_DAYS = 7
-
 function HistoryPage() {
+  const loaderData = Route.useLoaderData()
   const [view, setView] = useState<'list' | 'trend'>('list')
-  const [mealsByDate, setMealsByDate] = useState<Record<string, Meal[]>>({})
-  const [isLoading, setIsLoading] = useState(true)
+  const [mealsByDate, setMealsByDate] = useState<Record<string, Meal[]>>(loaderData.initialMeals)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const [hasMore, setHasMore] = useState(true)
-  const [oldestDate, setOldestDate] = useState<string | null>(null)
+  const [hasMore, setHasMore] = useState(loaderData.hasMore)
+  const [oldestDate, setOldestDate] = useState<string>(loaderData.oldestDate)
   const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set())
   const [loadMoreError, setLoadMoreError] = useState(false)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const isLoadingMoreRef = useRef(false)
-  const consecutiveEmptyRef = useRef(0)
+  const consecutiveEmptyRef = useRef(loaderData.hasMore ? 0 : 1)
 
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+  const tz = getTz()
 
-  const fetchRange = useCallback(async (endDate: string, append: boolean) => {
+  const fetchRange = useCallback(async (endDate: string) => {
     const end = new Date(endDate + 'T00:00:00')
     const start = new Date(end)
     start.setDate(start.getDate() - (PAGE_DAYS - 1))
     const startDate = start.toLocaleDateString('en-CA', { timeZone: tz })
 
     const allMeals = await getMealsRangeFn({ data: { startDate, endDate, timezone: tz } })
-
     const grouped = groupMealsByDate(allMeals, tz)
 
-    setMealsByDate((prev) => append ? { ...prev, ...grouped } : grouped)
+    setMealsByDate((prev) => ({ ...prev, ...grouped }))
     setOldestDate(startDate)
-    // Stop only after 3 consecutive empty windows (21 days gap) to handle gaps in logging
     if (allMeals.length === 0) {
       consecutiveEmptyRef.current += 1
       if (consecutiveEmptyRef.current >= 3) setHasMore(false)
@@ -64,11 +87,6 @@ function HistoryPage() {
     })
   }
 
-  useEffect(() => {
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: tz })
-    void fetchRange(today, false).finally(() => setIsLoading(false))
-  }, [fetchRange, tz])
-
   const handleLoadMore = useCallback(async () => {
     if (!oldestDate || isLoadingMoreRef.current) return
     isLoadingMoreRef.current = true
@@ -77,7 +95,7 @@ function HistoryPage() {
       const prev = new Date(oldestDate + 'T00:00:00')
       prev.setDate(prev.getDate() - 1)
       const newEnd = prev.toLocaleDateString('en-CA', { timeZone: tz })
-      await fetchRange(newEnd, true)
+      await fetchRange(newEnd)
     } catch (err) {
       console.error('[history] failed to load more:', err)
       setLoadMoreError(true)
@@ -90,7 +108,7 @@ function HistoryPage() {
 
   useEffect(() => {
     const sentinel = sentinelRef.current
-    if (!sentinel) return
+    if (!sentinel || !hasMore) return
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -137,9 +155,7 @@ function HistoryPage() {
 
       {view === 'trend' && <CalorieTrendChart />}
 
-      {view === 'list' && (isLoading ? (
-        <HistorySkeleton />
-      ) : sortedDates.length === 0 ? (
+      {view === 'list' && (sortedDates.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-12 text-center">
           <span className="text-5xl">📋</span>
           <h3 className="text-lg font-semibold text-[var(--sea-ink)]">No history yet</h3>
@@ -183,21 +199,9 @@ function HistoryPage() {
                             : 'text-[var(--sea-ink-soft)] hover:bg-[var(--chip-bg)] hover:text-[var(--sea-ink)]'
                         }`}
                         aria-label="Toggle macro breakdown"
+                        aria-expanded={isExpanded}
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
-                          <path d="M22 12A10 10 0 0 0 12 2v10z" />
-                        </svg>
+                        <PieChart size={16} />
                       </button>
                     </div>
                   </div>
@@ -230,52 +234,7 @@ function HistoryPage() {
                 {/* Meals for this date */}
                 <div className="space-y-2">
                   {dateMeals.map((meal) => (
-                    <Link
-                      key={meal.id}
-                      to="/history/$mealId"
-                      params={{ mealId: meal.id }}
-                      className="island-shell flex items-center gap-3 rounded-2xl p-4 transition hover:shadow-lg"
-                      onMouseEnter={() => prefetchMealDetail(meal.id)}
-                      onTouchStart={() => prefetchMealDetail(meal.id)}
-                    >
-                      <span className="text-2xl">{MEAL_TAG_EMOJI[meal.tag]}</span>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-semibold text-[var(--sea-ink)]">
-                            {MEAL_TAG_LABEL[meal.tag]}
-                          </span>
-                          <span className="text-sm font-bold text-[var(--sea-ink)]">
-                            {Math.round(meal.totals.calories)} kcal
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-[var(--sea-ink-soft)]">
-                            {meal.foods
-                              .slice(0, 2)
-                              .map((f) => f.name)
-                              .join(', ')}
-                            {meal.foods.length > 2 ? ` +${meal.foods.length - 2} more` : ''}
-                          </span>
-                          <span className="text-xs text-[var(--sea-ink-soft)]">
-                            {formatTime(meal.loggedAt)}
-                          </span>
-                        </div>
-                      </div>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="text-[var(--sea-ink-soft)]"
-                      >
-                        <polyline points="9 18 15 12 9 6" />
-                      </svg>
-                    </Link>
+                    <MealCard key={meal.id} meal={meal} showChevron />
                   ))}
                 </div>
               </div>
@@ -286,11 +245,7 @@ function HistoryPage() {
           {hasMore && (
             <div ref={sentinelRef} className="flex justify-center py-4">
               {isLoadingMore && (
-                <div
-                  role="status"
-                  aria-label="Loading more meals"
-                  className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--lagoon-deep)] border-t-transparent"
-                />
+                <LoadingSpinner size="md" label="Loading more meals" />
               )}
             </div>
           )}

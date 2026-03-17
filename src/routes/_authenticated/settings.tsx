@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { X } from 'lucide-react'
 import ThemeToggle from '#/components/ThemeToggle'
 import { authClient } from '#/lib/auth-client'
 import { clearPrefetchCache } from '#/lib/meal-prefetch-cache'
@@ -47,9 +48,7 @@ function RecentFoodsManager() {
               aria-label={`Remove ${f.name} from recent foods`}
               className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--sea-ink-soft)] transition hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
+              <X size={14} strokeWidth={2.5} />
             </button>
           </div>
         ))}
@@ -267,7 +266,7 @@ function SettingsPage() {
           <h2 className="mb-4 text-sm font-semibold text-[var(--sea-ink)]">Account</h2>
           <button
             type="button"
-            onClick={() => { clearPrefetchCache(); void authClient.signOut() }}
+            onClick={() => { clearPrefetchCache(); clearRecentFoods(); void authClient.signOut() }}
             className="w-full rounded-xl border border-red-200 py-2.5 text-sm font-medium text-red-500 transition hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950"
           >
             Sign out

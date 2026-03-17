@@ -15,6 +15,7 @@ const {
   mockDbUpdate,
   mockDbDelete,
   mockDbSelect,
+  mockDbSelectDistinct,
 } = vi.hoisted(() => ({
   mockGetSession: vi.fn(),
   mockGetRequest: vi.fn(() => ({ headers: { get: vi.fn().mockReturnValue(null) } })),
@@ -29,6 +30,7 @@ const {
   mockDbUpdate: vi.fn(),
   mockDbDelete: vi.fn(),
   mockDbSelect: vi.fn(),
+  mockDbSelectDistinct: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-start', () => ({
@@ -73,6 +75,7 @@ vi.mock('#/db', () => ({
     update: mockDbUpdate,
     delete: mockDbDelete,
     select: mockDbSelect,
+    selectDistinct: mockDbSelectDistinct,
   },
 }))
 
@@ -358,8 +361,8 @@ describe('getStreakFn', () => {
   })
 
   it('returns 0 when no meals logged', async () => {
-    mockDbSelect.mockReturnValue({
-      from: vi.fn(() => ({ where: vi.fn(() => ({ limit: vi.fn().mockResolvedValue([]) })) })),
+    mockDbSelectDistinct.mockReturnValue({
+      from: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })),
     })
     const result = await getStreakFn({})
     expect(result.streak).toBe(0)
@@ -368,12 +371,12 @@ describe('getStreakFn', () => {
   it('counts consecutive days ending today', async () => {
     vi.setSystemTime(new Date('2026-03-16T12:00:00Z'))
     const rows = [
-      { loggedAt: new Date('2026-03-16T10:00:00Z') },
-      { loggedAt: new Date('2026-03-15T10:00:00Z') },
-      { loggedAt: new Date('2026-03-14T10:00:00Z') },
+      { date: '2026-03-16' },
+      { date: '2026-03-15' },
+      { date: '2026-03-14' },
     ]
-    mockDbSelect.mockReturnValue({
-      from: vi.fn(() => ({ where: vi.fn(() => ({ limit: vi.fn().mockResolvedValue(rows) })) })),
+    mockDbSelectDistinct.mockReturnValue({
+      from: vi.fn(() => ({ where: vi.fn().mockResolvedValue(rows) })),
     })
     const result = await getStreakFn({})
     expect(result.streak).toBe(3)
@@ -383,11 +386,11 @@ describe('getStreakFn', () => {
   it('counts streak from yesterday when today has no meals', async () => {
     vi.setSystemTime(new Date('2026-03-16T12:00:00Z'))
     const rows = [
-      { loggedAt: new Date('2026-03-15T10:00:00Z') },
-      { loggedAt: new Date('2026-03-14T10:00:00Z') },
+      { date: '2026-03-15' },
+      { date: '2026-03-14' },
     ]
-    mockDbSelect.mockReturnValue({
-      from: vi.fn(() => ({ where: vi.fn(() => ({ limit: vi.fn().mockResolvedValue(rows) })) })),
+    mockDbSelectDistinct.mockReturnValue({
+      from: vi.fn(() => ({ where: vi.fn().mockResolvedValue(rows) })),
     })
     const result = await getStreakFn({})
     expect(result.streak).toBe(2)
@@ -397,12 +400,12 @@ describe('getStreakFn', () => {
   it('breaks streak on non-consecutive days', async () => {
     vi.setSystemTime(new Date('2026-03-16T12:00:00Z'))
     const rows = [
-      { loggedAt: new Date('2026-03-16T10:00:00Z') },
+      { date: '2026-03-16' },
       // gap on Mar 15
-      { loggedAt: new Date('2026-03-14T10:00:00Z') },
+      { date: '2026-03-14' },
     ]
-    mockDbSelect.mockReturnValue({
-      from: vi.fn(() => ({ where: vi.fn(() => ({ limit: vi.fn().mockResolvedValue(rows) })) })),
+    mockDbSelectDistinct.mockReturnValue({
+      from: vi.fn(() => ({ where: vi.fn().mockResolvedValue(rows) })),
     })
     const result = await getStreakFn({})
     expect(result.streak).toBe(1)
@@ -412,8 +415,8 @@ describe('getStreakFn', () => {
   it('reads tz cookie from request headers', async () => {
     const mockReq = { headers: { get: vi.fn().mockReturnValue('tz=Asia%2FHong_Kong') } }
     mockGetRequest.mockReturnValue(mockReq)
-    mockDbSelect.mockReturnValue({
-      from: vi.fn(() => ({ where: vi.fn(() => ({ limit: vi.fn().mockResolvedValue([]) })) })),
+    mockDbSelectDistinct.mockReturnValue({
+      from: vi.fn(() => ({ where: vi.fn().mockResolvedValue([]) })),
     })
     const result = await getStreakFn({})
     expect(result.streak).toBe(0)
@@ -433,40 +436,31 @@ describe('analyzePromptFn', () => {
     const result = await analyzePromptFn({ data: { prompt: 'a bowl of rice' } })
     expect(result.foods).toHaveLength(1)
     expect(result.foods[0].name).toBe('Rice')
-    expect(result.error).toBeUndefined()
   })
 
-  it('returns NOT_FOOD error for non-food prompt', async () => {
+  it('throws NOT_FOOD error for non-food prompt', async () => {
     mockGenerateContent.mockResolvedValue({ response: { text: () => JSON.stringify({ error: 'NOT_FOOD' }) } })
-    const result = await analyzePromptFn({ data: { prompt: 'what is the capital of France?' } })
-    expect(result.foods).toHaveLength(0)
-    expect(result.error).toContain('food')
+    await expect(analyzePromptFn({ data: { prompt: 'what is the capital of France?' } })).rejects.toThrow('food')
   })
 
-  it('returns error when JSON parse fails', async () => {
+  it('throws when JSON parse fails', async () => {
     mockGenerateContent.mockResolvedValue({ response: { text: () => 'invalid json {{{' } })
-    const result = await analyzePromptFn({ data: { prompt: 'rice' } })
-    expect(result.error).toBeDefined()
-    expect(result.foods).toHaveLength(0)
+    await expect(analyzePromptFn({ data: { prompt: 'rice' } })).rejects.toThrow()
   })
 
-  it('returns error when no food items detected in valid JSON', async () => {
+  it('throws when no food items detected in valid JSON', async () => {
     mockGenerateContent.mockResolvedValue({ response: { text: () => '[]' } })
-    const result = await analyzePromptFn({ data: { prompt: 'rice' } })
-    expect(result.error).toBeDefined()
-    expect(result.foods).toHaveLength(0)
+    await expect(analyzePromptFn({ data: { prompt: 'rice' } })).rejects.toThrow('No food items')
   })
 
-  it('returns error when Gemini throws', async () => {
+  it('throws when Gemini throws', async () => {
     mockGenerateContent.mockRejectedValue(new Error('API error'))
-    const result = await analyzePromptFn({ data: { prompt: 'rice' } })
-    expect(result.error).toBeDefined()
+    await expect(analyzePromptFn({ data: { prompt: 'rice' } })).rejects.toThrow()
   })
 
-  it('returns rate limit error when rate limiter rejects', async () => {
+  it('throws rate limit error when rate limiter rejects', async () => {
     mockAnalyzeConsume.mockRejectedValue({ msBeforeNext: 5000 })
-    const result = await analyzePromptFn({ data: { prompt: 'rice' } })
-    expect(result.error).toContain('5 second')
+    await expect(analyzePromptFn({ data: { prompt: 'rice' } })).rejects.toThrow('5 second')
   })
 
   it('strips markdown code fences from Gemini response', async () => {
@@ -496,29 +490,24 @@ describe('analyzeImageFn', () => {
     expect(result.foods[0].name).toBe('Burger')
   })
 
-  it('returns error when no food detected (empty array)', async () => {
+  it('throws when no food detected (empty array)', async () => {
     mockGenerateContent.mockResolvedValue({ response: { text: () => '[]' } })
-    const result = await analyzeImageFn({ data: IMAGE_DATA })
-    expect(result.error).toBeDefined()
-    expect(result.foods).toHaveLength(0)
+    await expect(analyzeImageFn({ data: IMAGE_DATA })).rejects.toThrow('No food items')
   })
 
-  it('returns error when JSON parse fails', async () => {
+  it('throws when JSON parse fails', async () => {
     mockGenerateContent.mockResolvedValue({ response: { text: () => 'not json' } })
-    const result = await analyzeImageFn({ data: IMAGE_DATA })
-    expect(result.error).toBeDefined()
+    await expect(analyzeImageFn({ data: IMAGE_DATA })).rejects.toThrow()
   })
 
-  it('returns error on Gemini failure', async () => {
+  it('throws on Gemini failure', async () => {
     mockGenerateContent.mockRejectedValue(new Error('Image too large'))
-    const result = await analyzeImageFn({ data: IMAGE_DATA })
-    expect(result.error).toContain('Image too large')
+    await expect(analyzeImageFn({ data: IMAGE_DATA })).rejects.toThrow()
   })
 
-  it('returns rate limit error when rate limiter rejects', async () => {
+  it('throws rate limit error when rate limiter rejects', async () => {
     mockAnalyzeConsume.mockRejectedValue({ msBeforeNext: 30000 })
-    const result = await analyzeImageFn({ data: IMAGE_DATA })
-    expect(result.error).toContain('30 second')
+    await expect(analyzeImageFn({ data: IMAGE_DATA })).rejects.toThrow('30 second')
   })
 })
 
@@ -540,26 +529,22 @@ describe('recalculateNutritionFn', () => {
     mockGenerateContent.mockResolvedValue({ response: { text: () => JSON.stringify(adjusted) } })
     const result = await recalculateNutritionFn({ data: RECALC_DATA })
     expect(result.food?.name).toBe('Rice (half)')
-    expect(result.error).toBeUndefined()
   })
 
-  it('returns error when Gemini returns invalid nutrition schema', async () => {
+  it('throws when Gemini returns invalid nutrition schema', async () => {
     const invalid = { name: 'Rice', calories: 'not a number' }
     mockGenerateContent.mockResolvedValue({ response: { text: () => JSON.stringify(invalid) } })
-    const result = await recalculateNutritionFn({ data: RECALC_DATA })
-    expect(result.error).toBe('Invalid nutrition data returned')
+    await expect(recalculateNutritionFn({ data: RECALC_DATA })).rejects.toThrow('Failed to recalculate')
   })
 
-  it('returns error when Gemini throws', async () => {
+  it('throws when Gemini throws', async () => {
     mockGenerateContent.mockRejectedValue(new Error('timeout'))
-    const result = await recalculateNutritionFn({ data: RECALC_DATA })
-    expect(result.error).toBe('Failed to recalculate nutrition')
+    await expect(recalculateNutritionFn({ data: RECALC_DATA })).rejects.toThrow('Failed to recalculate')
   })
 
-  it('returns rate limit error when rate limiter rejects', async () => {
+  it('throws rate limit error when rate limiter rejects', async () => {
     mockRecalcConsume.mockRejectedValue({ msBeforeNext: 2000 })
-    const result = await recalculateNutritionFn({ data: RECALC_DATA })
-    expect(result.error).toContain('2 second')
+    await expect(recalculateNutritionFn({ data: RECALC_DATA })).rejects.toThrow('2 second')
   })
 
   it('uses "standard serving" when portionDescription is not provided', async () => {
