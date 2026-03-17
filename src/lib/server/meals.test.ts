@@ -75,6 +75,7 @@ vi.mock('#/lib/env', () => ({
     R2_BUCKET_NAME: 'test',
     R2_PUBLIC_URL: 'https://test.r2.dev',
   },
+  usdaApiKey: undefined,
 }))
 
 vi.mock('#/db', () => ({
