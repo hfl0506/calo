@@ -110,18 +110,17 @@ export async function enrichWithNutritionAPI(
   // Process in batches to avoid hammering the API
   for (let i = 0; i < foods.length; i += MAX_CONCURRENT) {
     const batch = foods.slice(i, i + MAX_CONCURRENT);
-    const batchResults = await Promise.all(
-      batch.map(async (food) => {
-        try {
-          return await enrichSingleFood(food);
-        } catch (err) {
-          console.error(`[USDA API] Failed for "${food.name}":`, err);
-          return { ...food, nutritionSource: "gemini" as const };
-        }
-      }),
+    const settled = await Promise.allSettled(
+      batch.map((food) => enrichSingleFood(food)),
     );
-    for (let j = 0; j < batchResults.length; j++) {
-      results[i + j] = batchResults[j];
+    for (let j = 0; j < settled.length; j++) {
+      const result = settled[j];
+      if (result.status === "fulfilled") {
+        results[i + j] = result.value;
+      } else {
+        console.error(`[USDA API] Failed for "${batch[j].name}":`, result.reason);
+        results[i + j] = { ...batch[j], nutritionSource: "gemini" as const };
+      }
     }
   }
 

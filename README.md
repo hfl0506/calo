@@ -7,6 +7,7 @@ A mobile-first calorie and nutrition tracking app powered by Google Gemini AI. S
 ## Features
 
 - **AI Food Analysis** — Take a photo or describe your meal; Gemini 2.5 Flash identifies every food item and estimates calories, protein, carbs, fat, and fiber
+- **Hybrid Calorie Estimation** — Optionally enriches Gemini's estimates with ground-truth nutrition data from the USDA FoodData Central API for improved accuracy; falls back gracefully to Gemini-only when no API key is configured
 - **Photo Upload** — Meal images are compressed to WebP client-side and stored in Cloudflare R2
 - **Manual Adjustments** — Tweak any food item after analysis (e.g. "half of it", "coke zero", "skip rice")
 - **Daily Summary** — Home screen shows today's total calories, macros, and a progress bar against your daily goal
@@ -43,6 +44,7 @@ A mobile-first calorie and nutrition tracking app powered by Google Gemini AI. S
 | Auth | [Better Auth](https://www.better-auth.com) |
 | Image Storage | [Cloudflare R2](https://developers.cloudflare.com/r2) (S3-compatible) |
 | AI | [Google Gemini 2.5 Flash](https://ai.google.dev) (`@google/generative-ai`) |
+| Nutrition Data | [USDA FoodData Central](https://fdc.nal.usda.gov/) (optional, hybrid enrichment) |
 
 ### Tooling
 | | |
@@ -132,6 +134,7 @@ See `.env.example` for all required variables. Key ones:
 | `R2_SECRET_ACCESS_KEY` | R2 secret key |
 | `R2_BUCKET_NAME` | R2 bucket name |
 | `R2_PUBLIC_URL` | Public base URL for the R2 bucket |
+| `USDA_API_KEY` | *(Optional)* USDA FoodData Central API key — enables hybrid calorie estimation |
 
 ---
 
@@ -168,6 +171,7 @@ src/
 │   ├── types.ts            # Shared types & constants
 │   └── server/
 │       ├── meals.ts        # Meal CRUD + Gemini AI analysis
+│       ├── nutrition-api.ts # USDA FoodData Central client + nutrition enrichment
 │       ├── session.ts      # Shared auth session helper
 │       ├── settings.ts     # User settings (calorie + macro goals)
 │       └── upload.ts       # R2 presigned URL generation
