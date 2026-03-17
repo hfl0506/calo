@@ -1,4 +1,15 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('#/lib/env', () => ({
+  env: {
+    R2_ACCOUNT_ID: 'test-account-id',
+    R2_ACCESS_KEY_ID: 'test-access-key',
+    R2_SECRET_ACCESS_KEY: 'test-secret-key',
+    R2_BUCKET_NAME: 'test-bucket',
+    R2_PUBLIC_URL: 'https://test.r2.dev',
+  },
+}))
+
 import { getR2Client } from './r2'
 
 describe('getR2Client', () => {

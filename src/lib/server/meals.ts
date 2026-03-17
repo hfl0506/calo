@@ -25,7 +25,9 @@ import { env } from "#/lib/env";
 import { ANALYZE_TEXT_PROMPT, ANALYZE_IMAGE_PROMPT, RECALCULATE_PROMPT } from "#/lib/server/prompts";
 
 function throwRateLimitError(err: unknown): never {
-  const ms = err instanceof RateLimiterRes ? err.msBeforeNext : 60000;
+  const ms = typeof (err as RateLimiterRes)?.msBeforeNext === 'number'
+    ? (err as RateLimiterRes).msBeforeNext
+    : 60000;
   const secs = Math.ceil(ms / 1000);
   throw new AppError(
     'RATE_LIMITED',

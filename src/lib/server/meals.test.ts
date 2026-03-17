@@ -64,6 +64,19 @@ vi.mock('@aws-sdk/client-s3', () => ({ DeleteObjectCommand: vi.fn() }))
 
 vi.mock('#/lib/server/r2', () => ({ getR2Client: vi.fn(() => ({ send: mockR2Send })) }))
 
+vi.mock('#/lib/env', () => ({
+  env: {
+    DATABASE_URL: 'postgres://test',
+    BETTER_AUTH_SECRET: 'test',
+    GEMINI_API_KEY: 'test',
+    R2_ACCOUNT_ID: 'test',
+    R2_ACCESS_KEY_ID: 'test',
+    R2_SECRET_ACCESS_KEY: 'test',
+    R2_BUCKET_NAME: 'test',
+    R2_PUBLIC_URL: 'https://test.r2.dev',
+  },
+}))
+
 vi.mock('#/db', () => ({
   db: {
     query: {
