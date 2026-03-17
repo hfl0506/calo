@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useEffect, useReducer } from 'react'
 import { ChevronLeft, Pencil, Trash2, X } from 'lucide-react'
 import { deleteMealFn, getMealDetailFn, updateMealFn } from '#/lib/server/meals'
 import { getCachedMealDetail, invalidateCachedMealDetail } from '#/lib/meal-prefetch-cache'
@@ -34,43 +34,118 @@ function mealFoodsToAnalyzed(foods: MealDetail['foods']): AnalyzedFood[] {
   }))
 }
 
+// ── State machine ──
+
+type Mode = 'loading' | 'view' | 'edit'
+
+interface DetailState {
+  mode: Mode
+  meal: MealDetail | null
+  error: string | null
+  showDeleteConfirm: boolean
+  showUndoToast: boolean
+  showLightbox: boolean
+  editFoods: AnalyzedFood[]
+  editNotes: string
+  isSavingEdit: boolean
+  editError: string | null
+}
+
+type DetailAction =
+  | { type: 'LOADED'; meal: MealDetail }
+  | { type: 'LOAD_ERROR'; error: string }
+  | { type: 'ENTER_EDIT' }
+  | { type: 'SET_EDIT_FOODS'; foods: AnalyzedFood[] }
+  | { type: 'SET_EDIT_NOTES'; notes: string }
+  | { type: 'SAVE_EDIT_START' }
+  | { type: 'SAVE_EDIT_SUCCESS'; meal: MealDetail }
+  | { type: 'SAVE_EDIT_ERROR'; error: string }
+  | { type: 'CANCEL_EDIT' }
+  | { type: 'SHOW_DELETE_CONFIRM'; show: boolean }
+  | { type: 'START_UNDO_TOAST' }
+  | { type: 'CANCEL_UNDO' }
+  | { type: 'DELETE_ERROR'; error: string }
+  | { type: 'TOGGLE_LIGHTBOX'; show: boolean }
+  | { type: 'SET_ERROR'; error: string }
+
+function createInitialState(cached: MealDetail | null): DetailState {
+  return {
+    mode: cached ? 'view' : 'loading',
+    meal: cached,
+    error: null,
+    showDeleteConfirm: false,
+    showUndoToast: false,
+    showLightbox: false,
+    editFoods: [],
+    editNotes: '',
+    isSavingEdit: false,
+    editError: null,
+  }
+}
+
+function detailReducer(state: DetailState, action: DetailAction): DetailState {
+  switch (action.type) {
+    case 'LOADED':
+      return { ...state, mode: 'view', meal: action.meal, error: null }
+    case 'LOAD_ERROR':
+      return { ...state, mode: 'view', error: action.error }
+    case 'ENTER_EDIT':
+      if (!state.meal) return state
+      return {
+        ...state,
+        mode: 'edit',
+        editFoods: mealFoodsToAnalyzed(state.meal.foods),
+        editNotes: state.meal.notes ?? '',
+        editError: null,
+      }
+    case 'SET_EDIT_FOODS':
+      return { ...state, editFoods: action.foods }
+    case 'SET_EDIT_NOTES':
+      return { ...state, editNotes: action.notes }
+    case 'SAVE_EDIT_START':
+      return { ...state, isSavingEdit: true, editError: null }
+    case 'SAVE_EDIT_SUCCESS':
+      return { ...state, mode: 'view', meal: action.meal, isSavingEdit: false, editError: null }
+    case 'SAVE_EDIT_ERROR':
+      return { ...state, isSavingEdit: false, editError: action.error }
+    case 'CANCEL_EDIT':
+      return { ...state, mode: 'view', editError: null }
+    case 'SHOW_DELETE_CONFIRM':
+      return { ...state, showDeleteConfirm: action.show }
+    case 'START_UNDO_TOAST':
+      return { ...state, showDeleteConfirm: false, showUndoToast: true }
+    case 'CANCEL_UNDO':
+      return { ...state, showUndoToast: false }
+    case 'DELETE_ERROR':
+      return { ...state, showUndoToast: false, error: action.error }
+    case 'TOGGLE_LIGHTBOX':
+      return { ...state, showLightbox: action.show }
+    case 'SET_ERROR':
+      return { ...state, error: action.error }
+  }
+}
+
+// ── Component ──
+
 function MealDetailPage() {
   const { mealId } = Route.useParams()
   const navigate = useNavigate()
   const cached = getCachedMealDetail(mealId)
-  const [meal, setMeal] = useState<MealDetail | null>(cached)
-  const [isLoading, setIsLoading] = useState(!cached)
-  const [error, setError] = useState<string | null>(null)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [showUndoToast, setShowUndoToast] = useState(false)
-  const [showLightbox, setShowLightbox] = useState(false)
+  const [state, dispatch] = useReducer(detailReducer, cached, createInitialState)
 
-  // Edit mode state
-  const [isEditing, setIsEditing] = useState(false)
-  const [editFoods, setEditFoods] = useState<AnalyzedFood[]>([])
-  const [editNotes, setEditNotes] = useState('')
-  const [isSavingEdit, setIsSavingEdit] = useState(false)
-  const [editError, setEditError] = useState<string | null>(null)
+  const { mode, meal, error, showDeleteConfirm, showUndoToast, showLightbox, editFoods, editNotes, isSavingEdit, editError } = state
 
   useEffect(() => {
     getMealDetailFn({ data: { mealId } })
-      .then((data) => setMeal(data))
-      .catch((err) => { if (!cached) setError(err instanceof Error ? err.message : 'Failed to load meal') })
-      .finally(() => setIsLoading(false))
+      .then((data) => dispatch({ type: 'LOADED', meal: data }))
+      .catch((err) => {
+        if (!cached) dispatch({ type: 'LOAD_ERROR', error: err instanceof Error ? err.message : 'Failed to load meal' })
+      })
   }, [mealId])
-
-  const enterEditMode = () => {
-    if (!meal) return
-    setEditFoods(mealFoodsToAnalyzed(meal.foods))
-    setEditNotes(meal.notes ?? '')
-    setEditError(null)
-    setIsEditing(true)
-  }
 
   const handleSaveEdit = async () => {
     if (editFoods.length === 0 || isSavingEdit) return
-    setIsSavingEdit(true)
-    setEditError(null)
+    dispatch({ type: 'SAVE_EDIT_START' })
     try {
       await updateMealFn({
         data: {
@@ -81,12 +156,9 @@ function MealDetailPage() {
       })
       invalidateCachedMealDetail(mealId)
       const updated = await getMealDetailFn({ data: { mealId } })
-      setMeal(updated)
-      setIsEditing(false)
+      dispatch({ type: 'SAVE_EDIT_SUCCESS', meal: updated })
     } catch (err) {
-      setEditError(err instanceof Error ? err.message : 'Failed to save changes')
-    } finally {
-      setIsSavingEdit(false)
+      dispatch({ type: 'SAVE_EDIT_ERROR', error: err instanceof Error ? err.message : 'Failed to save changes' })
     }
   }
 
@@ -96,15 +168,13 @@ function MealDetailPage() {
       invalidateCachedMealDetail(mealId)
       await navigate({ to: '/history' })
     } catch (err) {
-      setShowUndoToast(false)
-      setError(err instanceof Error ? err.message : 'Failed to delete meal')
+      dispatch({ type: 'DELETE_ERROR', error: err instanceof Error ? err.message : 'Failed to delete meal' })
     }
   }
 
   const handleDelete = () => {
     navigator.vibrate?.(10)
-    setShowDeleteConfirm(false)
-    setShowUndoToast(true)
+    dispatch({ type: 'START_UNDO_TOAST' })
   }
 
   return (
@@ -120,15 +190,15 @@ function MealDetailPage() {
             <ChevronLeft size={20} />
           </Link>
           <h1 className="text-xl font-bold text-[var(--sea-ink)]">
-            {isEditing ? 'Edit Meal' : 'Meal Detail'}
+            {mode === 'edit' ? 'Edit Meal' : 'Meal Detail'}
           </h1>
         </div>
 
-        {meal && !isEditing && (
+        {meal && mode === 'view' && (
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={enterEditMode}
+              onClick={() => dispatch({ type: 'ENTER_EDIT' })}
               className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] text-[var(--sea-ink-soft)] transition hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)]"
               aria-label="Edit meal"
             >
@@ -136,7 +206,7 @@ function MealDetailPage() {
             </button>
             <button
               type="button"
-              onClick={() => setShowDeleteConfirm(true)}
+              onClick={() => dispatch({ type: 'SHOW_DELETE_CONFIRM', show: true })}
               className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-500 text-white transition hover:bg-red-600"
               aria-label="Delete meal"
             >
@@ -146,14 +216,14 @@ function MealDetailPage() {
         )}
       </div>
 
-      {isLoading ? (
+      {mode === 'loading' ? (
         <MealDetailSkeleton />
       ) : error ? (
         <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900 dark:bg-red-950 dark:text-red-400">
           {error}
         </div>
       ) : meal ? (
-        isEditing ? (
+        mode === 'edit' ? (
           /* ── EDIT MODE ── */
           <div className="rise-in space-y-4 pb-28">
             <NutritionSummaryBar foods={editFoods} />
@@ -165,7 +235,7 @@ function MealDetailPage() {
               </h2>
               <textarea
                 value={editNotes}
-                onChange={(e) => setEditNotes(e.target.value)}
+                onChange={(e) => dispatch({ type: 'SET_EDIT_NOTES', notes: e.target.value })}
                 maxLength={500}
                 rows={2}
                 placeholder="Restaurant name, mood, context…"
@@ -175,7 +245,7 @@ function MealDetailPage() {
 
             <div className="space-y-1">
               <h2 className="px-1 text-sm font-semibold text-[var(--sea-ink)]">Foods ({editFoods.length})</h2>
-              <FoodReviewList foods={editFoods} onChange={setEditFoods} />
+              <FoodReviewList foods={editFoods} onChange={(foods) => dispatch({ type: 'SET_EDIT_FOODS', foods })} />
             </div>
 
             {editError && (
@@ -186,7 +256,7 @@ function MealDetailPage() {
             <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-40 flex gap-3 border-t border-[var(--line)] bg-[var(--header-bg)] p-4 backdrop-blur-lg">
               <button
                 type="button"
-                onClick={() => setIsEditing(false)}
+                onClick={() => dispatch({ type: 'CANCEL_EDIT' })}
                 disabled={isSavingEdit}
                 className="flex-1 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] py-3 text-sm font-semibold text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)] disabled:opacity-40"
               >
@@ -228,7 +298,7 @@ function MealDetailPage() {
             {meal.imageUrl && (
               <button
                 type="button"
-                onClick={() => setShowLightbox(true)}
+                onClick={() => dispatch({ type: 'TOGGLE_LIGHTBOX', show: true })}
                 className="island-shell w-full overflow-hidden rounded-2xl"
               >
                 <img
@@ -287,12 +357,12 @@ function MealDetailPage() {
           aria-modal="true"
           aria-label="Meal image lightbox"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowLightbox(false) }}
-          onKeyDown={(e) => { if (e.key === 'Escape') setShowLightbox(false) }}
+          onClick={(e) => { if (e.target === e.currentTarget) dispatch({ type: 'TOGGLE_LIGHTBOX', show: false }) }}
+          onKeyDown={(e) => { if (e.key === 'Escape') dispatch({ type: 'TOGGLE_LIGHTBOX', show: false }) }}
         >
           <button
             type="button"
-            onClick={() => setShowLightbox(false)}
+            onClick={() => dispatch({ type: 'TOGGLE_LIGHTBOX', show: false })}
             className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white transition hover:bg-black/70"
             aria-label="Close"
           >
@@ -313,7 +383,7 @@ function MealDetailPage() {
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => setShowDeleteConfirm(false)}
+                onClick={() => dispatch({ type: 'SHOW_DELETE_CONFIRM', show: false })}
                 className="flex-1 rounded-xl border border-[var(--line)] bg-[var(--chip-bg)] py-2.5 text-sm font-medium text-[var(--sea-ink)] transition hover:bg-[var(--link-bg-hover)]"
               >
                 Cancel
@@ -334,7 +404,7 @@ function MealDetailPage() {
       {showUndoToast && (
         <UndoToast
           message="Meal deleted"
-          onUndo={() => setShowUndoToast(false)}
+          onUndo={() => dispatch({ type: 'CANCEL_UNDO' })}
           onDismiss={() => void executeDelete()}
         />
       )}

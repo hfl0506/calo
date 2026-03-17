@@ -71,9 +71,9 @@ export default function ImagePicker({ onImage, onPrompt }: ImagePickerProps) {
     if (!file) return
     setFileError(null)
 
-    const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
+    const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
     if (file.size > MAX_FILE_SIZE) {
-      setFileError('Image is too large. Please choose a photo under 50MB.')
+      setFileError('Image is too large. Please choose a photo under 10MB.')
       return
     }
 

@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import type { DayData } from '#/lib/analytics'
 
 function formatBarLabel(dateStr: string, totalDays: number): string {
@@ -61,8 +62,31 @@ export function SvgBarChart({
 
   const goalY = goalValue ? toY(goalValue) : null
 
+  // Event delegation: resolve bar index from click position
+  const handleClick = useCallback(
+    (e: React.MouseEvent<SVGSVGElement>) => {
+      const svg = e.currentTarget
+      const rect = svg.getBoundingClientRect()
+      const svgX = ((e.clientX - rect.left) / rect.width) * W
+      const idx = Math.floor((svgX - padL) / slotW)
+      if (idx >= 0 && idx < days.length) {
+        onSelect(idx)
+      }
+    },
+    [days.length, onSelect, slotW],
+  )
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full select-none" style={{ overflow: 'visible' }}>
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className="w-full select-none"
+      style={{ overflow: 'visible', cursor: 'pointer' }}
+      role="img"
+      aria-label={`Bar chart showing ${days.length} days of data`}
+      onClick={handleClick}
+    >
+      <title>Nutrition intake chart</title>
+
       {/* Gridlines + Y labels */}
       {yTicks.map((tick) => (
         <g key={tick}>
@@ -80,7 +104,7 @@ export function SvgBarChart({
         </g>
       ))}
 
-      {/* Goal line (calories only) */}
+      {/* Goal line */}
       {goalY !== null && goalY >= padT && goalY <= padT + chartH && (
         <line
           x1={padL} y1={goalY} x2={W - padR} y2={goalY}
@@ -99,7 +123,7 @@ export function SvgBarChart({
         const isOver = goalValue != null && goalValue > 0 && val > goalValue
 
         return (
-          <g key={day.date} onClick={() => onSelect(i)} style={{ cursor: 'pointer' }}>
+          <g key={day.date}>
             {/* Wide hit area */}
             <rect x={padL + i * slotW} y={padT} width={slotW} height={chartH} fill="transparent" />
 
@@ -122,6 +146,17 @@ export function SvgBarChart({
                 x={bx - 1} y={by - 1} width={barW + 2} height={barH + 2} rx="4"
                 fill="none" stroke={activeColor} strokeWidth="1.5"
               />
+            )}
+
+            {/* Over-goal marker for accessibility (not color-only) */}
+            {isOver && val > 0 && (
+              <text
+                x={bx + barW / 2} y={by - 4}
+                textAnchor="middle" fontSize="7" fill="rgba(239,68,68,0.9)"
+                aria-label="Over goal"
+              >
+                !
+              </text>
             )}
 
             {showLabel(i) && (

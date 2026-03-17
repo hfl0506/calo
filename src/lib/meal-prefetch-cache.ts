@@ -7,6 +7,8 @@ type CacheEntry = { data: Awaited<ReturnType<typeof getMealDetailFn>>; fetchedAt
 
 const cache = new Map<string, CacheEntry>()
 const inflight = new Set<string>() // deduplicates concurrent prefetch calls
+const failed = new Map<string, number>() // mealId → timestamp of last failure
+const FAIL_COOLDOWN = 60_000 // don't retry a failed prefetch for 60s
 
 function evictExpired(): void {
   const now = Date.now()
@@ -31,6 +33,7 @@ if (typeof window !== 'undefined') {
 export function clearPrefetchCache(): void {
   cache.clear()
   inflight.clear()
+  failed.clear()
   if (evictIntervalId !== undefined) {
     clearInterval(evictIntervalId)
     evictIntervalId = undefined
@@ -55,13 +58,20 @@ export function prefetchMealDetail(mealId: string): void {
   if (getCachedMealDetail(mealId)) return
   if (inflight.has(mealId)) return
 
+  const failedAt = failed.get(mealId)
+  if (failedAt && Date.now() - failedAt < FAIL_COOLDOWN) return
+
   inflight.add(mealId)
   void getMealDetailFn({ data: { mealId } })
     .then((data) => {
       evictExpired()
       if (cache.size >= MAX_SIZE) evictOldest()
       cache.set(mealId, { data, fetchedAt: Date.now() })
+      failed.delete(mealId)
     })
-    .catch((err) => { console.warn('[prefetch] failed for', mealId, err) })
+    .catch((err) => {
+      console.warn('[prefetch] failed for', mealId, err)
+      failed.set(mealId, Date.now())
+    })
     .finally(() => inflight.delete(mealId))
 }

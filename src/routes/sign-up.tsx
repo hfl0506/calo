@@ -32,8 +32,8 @@ function SignUpPage() {
     handleSubmit,
     formState: { errors, isSubmitting },
     setError,
-  // TODO: remove cast when @hookform/resolvers supports zod v4.3+
-  } = useForm<FormData>({ resolver: zodResolver(schema as any) })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Zod v4 types incompatible with @hookform/resolvers
+} = useForm<FormData>({ resolver: zodResolver(schema as any) })
 
   const onSubmit = async (data: FormData) => {
     const { error } = await authClient.signUp.email({

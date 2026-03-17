@@ -45,4 +45,23 @@ describe('localDateToUTC', () => {
     // EDT = UTC-4
     expect(result.toISOString()).toBe('2025-06-01T16:00:00.000Z')
   })
+
+  it('handles DST fall-back transition (Nov 2, 2025 in New York)', () => {
+    // Clocks fall back at 2:00 AM → 1:00 AM (EDT→EST), so 1:30 AM is ambiguous.
+    // The function should still produce a valid result without throwing.
+    const result = localDateToUTC('2025-11-02T01:30:00', 'America/New_York')
+    expect(result).toBeInstanceOf(Date)
+    expect(result.toISOString()).toMatch(/^2025-11-02T0[56]:30:00\.000Z$/)
+  })
+
+  it('converts negative-offset timezone (Pacific/Auckland, NZDT UTC+13)', () => {
+    // During NZDT (summer), Auckland is UTC+13
+    const result = localDateToUTC('2025-01-15T00:00:00', 'Pacific/Auckland')
+    expect(result.toISOString()).toBe('2025-01-14T11:00:00.000Z')
+  })
+
+  it('converts half-hour offset timezone (Asia/Kathmandu, UTC+5:45)', () => {
+    const result = localDateToUTC('2025-03-13T00:00:00', 'Asia/Kathmandu')
+    expect(result.toISOString()).toBe('2025-03-12T18:15:00.000Z')
+  })
 })

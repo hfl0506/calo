@@ -1,3 +1,8 @@
+/** Returns the user's IANA timezone string on the client. */
+export function getClientTimezone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone
+}
+
 /**
  * Convert a wall-clock datetime string (e.g. "2025-03-13T00:00:00") in the
  * given IANA timezone to an absolute UTC Date.

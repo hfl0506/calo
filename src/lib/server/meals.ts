@@ -273,7 +273,7 @@ export const getMealsRangeFn = createServerFn({ method: "GET" })
     const session = await getSession();
     if (!session) throw new AppError('UNAUTHORIZED', 'Unauthorized');
 
-    const tz = data.timezone ?? "UTC";
+    const tz = await resolveTimezone(data.timezone);
     const startDate = localDateToUTC(`${data.startDate}T00:00:00`, tz);
     const endDate = localDateToUTC(`${data.endDate}T23:59:59.999`, tz);
 

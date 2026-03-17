@@ -35,7 +35,7 @@ export function UndoToast({ message, onUndo, onDismiss, durationMs = 5000 }: Und
   }
 
   return (
-    <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom)+0.75rem)] left-4 right-4 z-50">
+    <div role="alert" aria-live="assertive" className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom)+0.75rem)] left-4 right-4 z-50">
       <div className="island-shell overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--header-bg)] shadow-lg">
         {/* Progress bar */}
         <div

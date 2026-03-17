@@ -178,12 +178,17 @@ function LogMealPage() {
       data: { fileName, contentType: mimeType, date },
     })
 
-    const binary = atob(base64)
-    const bytes = new Uint8Array(binary.length)
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i)
+    let blob: Blob
+    try {
+      const binary = atob(base64)
+      const bytes = new Uint8Array(binary.length)
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i)
+      }
+      blob = new Blob([bytes], { type: mimeType })
+    } catch {
+      throw new Error('Failed to encode image data')
     }
-    const blob = new Blob([bytes], { type: mimeType })
 
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 30_000)

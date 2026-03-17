@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getMealsRangeFn } from "#/lib/server/meals";
 import { getUserSettingsFn } from "#/lib/server/settings";
+import { getClientTimezone } from "#/lib/timezone";
 import { TrendChartSkeleton } from "#/components/SkeletonCard";
 import { InsightsCard } from "#/components/InsightsCard";
 import { SvgBarChart } from "#/components/SvgBarChart";
@@ -32,7 +33,7 @@ function formatDetailDate(dateStr: string): string {
 }
 
 export function CalorieTrendChart() {
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const tz = getClientTimezone();
   const today = new Date().toLocaleDateString("en-CA", { timeZone: tz });
 
   const [period, setPeriod] = useState<Period>("7d");

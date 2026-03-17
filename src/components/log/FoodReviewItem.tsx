@@ -56,6 +56,7 @@ export default memo(function FoodReviewItem({ food, onChange, onDelete }: FoodRe
             <button
               type="button"
               onClick={() => setExpanded(!expanded)}
+              aria-expanded={expanded}
               className="text-xs text-[var(--lagoon-deep)] transition hover:opacity-80"
             >
               {expanded ? '▲ Hide details' : '▼ Edit macros'}

@@ -9,18 +9,15 @@ import { roundMacro } from '#/lib/nutrition'
 import { CalorieTrendChart } from '#/components/CalorieTrendChart'
 import type { Meal } from '#/lib/types'
 import { groupMealsByDate } from '#/lib/meal-utils'
+import { getClientTimezone } from '#/lib/timezone'
 import { RouteErrorBoundary } from '#/components/RouteErrorBoundary'
 import { PieChart } from 'lucide-react'
 
 const PAGE_DAYS = 7
 
-function getTz() {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone
-}
-
 export const Route = createFileRoute('/_authenticated/history/')({
   loader: async () => {
-    const tz = getTz()
+    const tz = getClientTimezone()
     const today = new Date().toLocaleDateString('en-CA', { timeZone: tz })
     const start = new Date()
     start.setDate(start.getDate() - (PAGE_DAYS - 1))
@@ -57,7 +54,7 @@ function HistoryPage() {
   const isLoadingMoreRef = useRef(false)
   const consecutiveEmptyRef = useRef(loaderData.hasMore ? 0 : 1)
 
-  const tz = getTz()
+  const tz = getClientTimezone()
 
   const fetchRange = useCallback(async (endDate: string) => {
     const end = new Date(endDate + 'T00:00:00')
