@@ -33,6 +33,15 @@ export const ANALYZE_IMAGE_PROMPT = `You are a nutrition expert. Analyze this fo
 
 For each item provide your best estimate of the nutrition based on the visible portion size.
 
+REFERENCE OBJECT CALIBRATION:
+Look for any common reference object in the image that can help you estimate portion sizes more accurately:
+- Credit card / ID card (85.6 × 53.98 mm)
+- Coin — HK$1 (25mm), HK$5 (27mm), US quarter (24mm), £1 (23mm)
+- Standard chopsticks (~24cm), fork (~19cm), spoon (~17cm)
+- Smartphone (~15cm length)
+- Hand / palm (~18cm length for adult)
+If a reference object is present, use its known dimensions to calibrate your weight and portion estimates. Do NOT include the reference object as a food item.
+
 Return ONLY a valid JSON array with no markdown fences:
 [
   {
