@@ -296,6 +296,12 @@ function LogMealPage() {
             <ImagePicker
               onImage={(base64, mimeType) => void handleImage(base64, mimeType)}
               onPrompt={(prompt) => void handlePrompt(prompt)}
+              onBarcodeScan={(food) => {
+                dispatch({ type: 'SET_FOODS_FROM_RECENT', foods: [food] })
+              }}
+              onBarcodeError={(error) => {
+                dispatch({ type: 'SET_ERROR', error })
+              }}
             />
 
             {recentFoods.length > 0 && (

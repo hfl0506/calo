@@ -1,11 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
-import { Camera, MessageSquare, Upload, Send } from 'lucide-react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { Camera, MessageSquare, Upload, Send, ScanBarcode, Loader2 } from 'lucide-react'
+import type { AnalyzedFood } from '#/lib/types'
+
+const BarcodeScanner = lazy(() => import('#/components/log/BarcodeScanner'))
 
 export type ImageMimeType = 'image/jpeg' | 'image/png' | 'image/webp'
 
 interface ImagePickerProps {
   onImage: (base64: string, mimeType: ImageMimeType) => void
   onPrompt: (prompt: string) => void
+  onBarcodeScan: (food: AnalyzedFood) => void
+  onBarcodeError: (error: string) => void
 }
 
 function compressImage(file: File): Promise<{ base64: string; mimeType: ImageMimeType }> {
@@ -56,14 +61,14 @@ function compressImage(file: File): Promise<{ base64: string; mimeType: ImageMim
   })
 }
 
-export default function ImagePicker({ onImage, onPrompt }: ImagePickerProps) {
+export default function ImagePicker({ onImage, onPrompt, onBarcodeScan, onBarcodeError }: ImagePickerProps) {
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const uploadInputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [fileError, setFileError] = useState<string | null>(null)
   const [promptText, setPromptText] = useState('')
-  const [mode, setMode] = useState<'photo' | 'text'>('photo')
+  const [mode, setMode] = useState<'photo' | 'text' | 'barcode'>('photo')
 
   useEffect(() => {
     return () => {
@@ -159,9 +164,31 @@ export default function ImagePicker({ onImage, onPrompt }: ImagePickerProps) {
           <MessageSquare size={16} />
           Describe
         </button>
+        <button
+          type="button"
+          onClick={() => setMode('barcode')}
+          className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+            mode === 'barcode'
+              ? 'bg-[var(--lagoon-deep)] text-white shadow-sm'
+              : 'text-[var(--sea-ink-soft)] hover:text-[var(--sea-ink)]'
+          }`}
+        >
+          <ScanBarcode size={16} />
+          Barcode
+        </button>
       </div>
 
-      {mode === 'photo' ? (
+      {mode === 'barcode' ? (
+        <Suspense
+          fallback={
+            <div className="flex w-full max-w-sm items-center justify-center py-12">
+              <Loader2 size={24} className="animate-spin text-[var(--lagoon-deep)]" />
+            </div>
+          }
+        >
+          <BarcodeScanner onResult={onBarcodeScan} onError={onBarcodeError} />
+        </Suspense>
+      ) : mode === 'photo' ? (
         <>
           {fileError && (
         <div role="alert" className="w-full max-w-sm rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900 dark:bg-red-950 dark:text-red-400">
