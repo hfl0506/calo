@@ -10,7 +10,7 @@ export type GeminiError =
  * The `code` helps the client branch on error type without parsing strings.
  */
 export class AppError extends Error {
-  public readonly code: 'RATE_LIMITED' | 'NOT_FOOD' | 'NO_ITEMS' | 'ANALYSIS_FAILED' | 'NOT_FOUND' | 'UNAUTHORIZED'
+  public readonly code: 'RATE_LIMITED' | 'NOT_FOOD' | 'NO_ITEMS' | 'ANALYSIS_FAILED' | 'NOT_FOUND' | 'UNAUTHORIZED' | 'FETCH_FAILED' | 'NO_BARCODE'
   public readonly retryAfterMs?: number
 
   constructor(
